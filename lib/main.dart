@@ -5,7 +5,6 @@ void main() {
   runApp(const OctoApp());
 }
 
-// ─────────────────────────────────────────────
 // AUTH STATE (nanti ganti dengan state management beneran)
 // ─────────────────────────────────────────────
 class AuthState {

@@ -207,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
       focusNode: _focusNode,
       style: const TextStyle(color: Colors.white, fontSize: 16),
       cursorColor: Colors.white,
-      onSubmitted: (_) => _handleLogin(), // ← bisa login pakai keyboard "done"
+      onSubmitted: (_) => _handleLogin(), 
       decoration: InputDecoration(
         hintText: 'Masukkan user ID',
         helperText: (_isTyping && _controller.text.length < 5)

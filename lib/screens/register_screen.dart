@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import '../services/api_service.dart';
+import '../main.dart';
 
 enum Pekerjaan {
   pelajar_mahasiswa("Pelajar / Mahasiswa"),
@@ -28,15 +30,119 @@ class _RegisterScreenState extends State<RegisterScreen> {
   DateTime? _selectedDate;
   Pekerjaan? _selectedPekerjaan;
 
-  void _nextStep() {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _namaController = TextEditingController();
+  final TextEditingController _nikController = TextEditingController();
+  final TextEditingController _teleponController = TextEditingController();
+  final TextEditingController _alamatController = TextEditingController();
+  final TextEditingController _kotaController = TextEditingController();
+  final TextEditingController _provinsiController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _namaController.dispose();
+    _nikController.dispose();
+    _teleponController.dispose();
+    _alamatController.dispose();
+    _kotaController.dispose();
+    _provinsiController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _nextStep() async {
     if (_currentStep == 1) {
+      if (_emailController.text.isEmpty ||
+          _usernameController.text.isEmpty ||
+          _passwordController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Harap lengkapi semua data')),
+        );
+        return;
+      }
       setState(() => _currentStep = 2);
     } else {
-      // Selesai registrasi
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat!')));
-      Navigator.pop(context);
+      if (_namaController.text.isEmpty ||
+          _nikController.text.isEmpty ||
+          _selectedDate == null ||
+          _teleponController.text.isEmpty ||
+          _selectedPekerjaan == null ||
+          _alamatController.text.isEmpty ||
+          _kotaController.text.isEmpty ||
+          _provinsiController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Harap lengkapi semua data diri')),
+        );
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      try {
+        bool isRegistered = await ApiService.register(
+          _usernameController.text,
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        if (!isRegistered) {
+          throw Exception(
+            'Registrasi gagal. Username/email mungkin sudah terpakai.',
+          );
+        }
+
+        bool isLoggedIn = await ApiService.login(
+          _usernameController.text,
+          _passwordController.text,
+        );
+
+        if (!isLoggedIn) {
+          throw Exception('Gagal login setelah registrasi.');
+        }
+
+        Map<String, dynamic> profileData = {
+          'full_name': _namaController.text,
+          'nik': _nikController.text,
+          'dob':
+              '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}',
+          'phone_number': _teleponController.text,
+          'occupation': _selectedPekerjaan!.label,
+          'address': _alamatController.text,
+          'city': _kotaController.text,
+          'province': _provinsiController.text,
+          'consent_personalization': false,
+        };
+
+        bool isProfileCreated = await ApiService.createProfile(profileData);
+
+        if (!isProfileCreated) {
+          throw Exception('Gagal menyimpan profil.');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Akun berhasil dibuat!')),
+          );
+          AuthState.isLoggedIn = true;
+          Navigator.pushReplacementNamed(context, '/home-loggedin');
+          ;
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -139,7 +245,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: _nextStep,
+                                    onPressed: _isLoading ? null : _nextStep,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       shadowColor: Colors.transparent,
@@ -151,16 +257,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         borderRadius: BorderRadius.circular(25),
                                       ),
                                     ),
-                                    child: Text(
-                                      _currentStep == 1
-                                          ? 'Lanjut ke Data Diri'
-                                          : 'Buat Akun',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            _currentStep == 1
+                                                ? 'Lanjut ke Data Diri'
+                                                : 'Buat Akun',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ),
@@ -296,12 +411,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
         const SizedBox(height: 32),
-        _buildTextField(label: 'Email Aktif', hintText: 'Masukkan Email Aktif'),
-        _buildTextField(label: 'Username', hintText: 'Buat Username'),
+        _buildTextField(
+          label: 'Email Aktif',
+          hintText: 'Masukkan Email Aktif',
+          controller: _emailController,
+        ),
+        _buildTextField(
+          label: 'Username',
+          hintText: 'Buat Username',
+          controller: _usernameController,
+        ),
         _buildTextField(
           label: 'Kata Sandi',
           hintText: 'Buat Kata Sandi',
-          isPassword: true,
+          obscureText: _obscurePassword,
+          controller: _passwordController,
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -344,8 +468,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _buildTextField(
           label: 'Nama Lengkap',
           hintText: 'Masukkan Nama Lengkap',
+          controller: _namaController,
         ),
-        _buildTextField(label: 'NIK', hintText: 'Masukkan NIK sesuai KTP'),
+        _buildTextField(
+          label: 'NIK',
+          hintText: 'Masukkan NIK sesuai KTP',
+          controller: _nikController,
+        ),
 
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,10 +504,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: Colors.black26,
                       fontSize: 14,
                     ),
-                    suffixIcon: const Icon(
-                      Icons.calendar_month_outlined,
-                      color: Color(0xFF7B0000),
-                      size: 22,
+                    suffixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SvgPicture.asset(
+                        'assets/icons/calendar.svg',
+                        width: 22,
+                        height: 22,
+                      ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -408,6 +540,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           hintText: 'Masukkan Nomor Telepon Aktif',
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          controller: _teleponController,
         ),
 
         const Padding(
@@ -481,6 +614,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _buildTextField(
           label: 'Alamat',
           hintText: 'Masukkan Alamat sesuai KTP',
+          controller: _alamatController,
+        ),
+
+        _buildTextField(
+          label: 'Kota',
+          hintText: 'Masukkan Kota',
+          controller: _kotaController,
+        ),
+
+        _buildTextField(
+          label: 'Provinsi',
+          hintText: 'Masukkan Provinsi',
+          controller: _provinsiController,
         ),
       ],
     );
@@ -489,10 +635,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildTextField({
     required String label,
     required String hintText,
-    bool isPassword = false,
+    bool obscureText = false,
     Widget? suffixIcon,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    TextEditingController? controller,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,8 +654,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 8),
         TextField(
-          obscureText: isPassword,
-          keyboardType: keyboardType, // ← tambah ini
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           style: const TextStyle(fontSize: 14, color: Colors.black87),
           decoration: InputDecoration(
