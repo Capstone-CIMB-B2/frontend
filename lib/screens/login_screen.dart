@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'home_screen.dart'; 
+import 'home_screen.dart';
 import 'register_screen.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,41 +12,88 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final FocusNode _focusNode = FocusNode();
-  final TextEditingController _controller = TextEditingController();
-  bool _isTyping = false;
+  final FocusNode _usernameFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _isUsernameTyping = false;
+  bool _isPasswordTyping = false;
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(() {
-      setState(() {
-        _isTyping = _focusNode.hasFocus;
-      });
+
+    _usernameFocusNode.addListener(() {
+      setState(() => _isUsernameTyping = _usernameFocusNode.hasFocus);
     });
-    _controller.addListener(() {
-      setState(() {});
+    _passwordFocusNode.addListener(() {
+      setState(() => _isPasswordTyping = _passwordFocusNode.hasFocus);
     });
+
+    _usernameController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
-    _controller.dispose();
+    _usernameFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
-    if (_controller.text.length < 5) {
-      _focusNode.requestFocus(); 
+  Future<void> _handleLogin() async {
+    // Validasi username
+    if (_usernameController.text.length < 5) {
+      _usernameFocusNode.requestFocus();
+      return;
+    }
+    // Validasi password
+    if (_passwordController.text.length < 6) {
+      _passwordFocusNode.requestFocus();
       return;
     }
 
-    // Navigasi ke home logged in, hapus semua history
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const OctoHomeScreenLoggedIn()),
-      (route) => false,
+    setState(() => _isLoading = true);
+
+    try {
+      final success = await ApiService.login(
+        _usernameController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const OctoHomeScreenLoggedIn()),
+          (route) => false,
+        );
+      } else {
+        _showErrorSnackbar('Username atau password salah');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackbar('Gagal terhubung ke server. Periksa koneksi Anda.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF4A0000),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
     );
   }
 
@@ -63,24 +111,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 60),
 
-              _buildUserIdForm(),
+              _buildUsernameField(),
+
+              const SizedBox(height: 24),
+
+              _buildPasswordField(),
 
               const SizedBox(height: 32),
 
               ElevatedButton(
-                onPressed: _handleLogin,
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF7B0000),
+                  disabledBackgroundColor: Colors.white.withOpacity(0.5),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text(
-                  'Login',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Color(0xFF7B0000),
+                        ),
+                      )
+                    : const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
 
               const SizedBox(height: 40),
@@ -170,16 +235,24 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
         Column(
-            children: [
-              const Text(
-                'Login',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          children: [
+            const Text(
+              'Login',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 4),
+            ),
+            const SizedBox(height: 4),
             Container(width: 50, height: 2, color: Colors.white),
           ],
         ),
@@ -192,8 +265,22 @@ class _LoginScreenState extends State<LoginScreen> {
           child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Butuh', style: TextStyle(color: Color(0xFF7B0000), fontSize: 9, fontWeight: FontWeight.bold)),
-              Text('bantuan?', style: TextStyle(color: Color(0xFF7B0000), fontSize: 9, fontWeight: FontWeight.bold)),
+              Text(
+                'Butuh',
+                style: TextStyle(
+                  color: Color(0xFF7B0000),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'bantuan?',
+                style: TextStyle(
+                  color: Color(0xFF7B0000),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
@@ -201,35 +288,103 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildUserIdForm() {
+  Widget _buildUsernameField() {
     return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
+      controller: _usernameController,
+      focusNode: _usernameFocusNode,
       style: const TextStyle(color: Colors.white, fontSize: 16),
       cursorColor: Colors.white,
-      onSubmitted: (_) => _handleLogin(), 
+      textInputAction: TextInputAction.next,
+      onSubmitted: (_) => _passwordFocusNode.requestFocus(),
       decoration: InputDecoration(
-        hintText: 'Masukkan user ID',
-        helperText: (_isTyping && _controller.text.length < 5)
-            ? 'User ID harus berisi minimal 5 karakter'
+        hintText: 'Masukkan username',
+        helperText: (_isUsernameTyping &&
+                _usernameController.text.isNotEmpty &&
+                _usernameController.text.length < 5)
+            ? 'Username harus berisi minimal 5 karakter'
             : ' ',
         helperStyle: const TextStyle(color: Colors.white70, fontSize: 10),
-        hintStyle: const TextStyle(color: Colors.white),
+        hintStyle: const TextStyle(color: Colors.white54),
+        labelText: 'Username',
+        labelStyle: const TextStyle(color: Colors.white70, fontSize: 14),
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (_controller.text.isNotEmpty)
+            if (_usernameController.text.isNotEmpty)
               GestureDetector(
-                onTap: () => _controller.clear(),
+                onTap: () => _usernameController.clear(),
                 child: Padding(
                   padding: const EdgeInsets.only(right: 12),
-                  child: Icon(Icons.cancel, color: Colors.white.withOpacity(0.8), size: 18),
+                  child: Icon(
+                    Icons.cancel,
+                    color: Colors.white.withOpacity(0.8),
+                    size: 18,
+                  ),
                 ),
               ),
             Text(
-              'Lupa user ID?',
-              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+              'Lupa username?',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+        ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextField(
+      controller: _passwordController,
+      focusNode: _passwordFocusNode,
+      obscureText: !_isPasswordVisible,
+      style: const TextStyle(color: Colors.white, fontSize: 16),
+      cursorColor: Colors.white,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _handleLogin(),
+      decoration: InputDecoration(
+        hintText: 'Masukkan password',
+        helperText: (_isPasswordTyping &&
+                _passwordController.text.isNotEmpty &&
+                _passwordController.text.length < 6)
+            ? 'Password harus berisi minimal 6 karakter'
+            : ' ',
+        helperStyle: const TextStyle(color: Colors.white70, fontSize: 10),
+        hintStyle: const TextStyle(color: Colors.white54),
+        labelText: 'Password',
+        labelStyle: const TextStyle(color: Colors.white70, fontSize: 14),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () =>
+                  setState(() => _isPasswordVisible = !_isPasswordVisible),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(
+                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 20,
+                ),
+              ),
+            ),
+            Text(
+              'Lupa password?',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 12,
+              ),
             ),
           ],
         ),

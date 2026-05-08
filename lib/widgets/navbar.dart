@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-// ─────────────────────────────────────────────
-// 7. BOTTOM NAVIGATION BAR
+// BOTTOM NAVIGATION BAR
 // ─────────────────────────────────────────────
 class OctoBottomNavBar extends StatelessWidget {
   const OctoBottomNavBar({super.key, required this.selected, required this.onSelect});
@@ -11,12 +10,11 @@ class OctoBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 👇 Menggunakan PhysicalShape agar bayangannya tegas dan bentuknya kita kontrol 100%
     return PhysicalShape(
       color: Colors.white,
       elevation: 25,
       shadowColor: Colors.black87,
-      clipper: const NavbarClipper(), // 👇 Memanggil alat cetak manual kita
+      clipper: const NavbarClipper(),
       child: SizedBox(
         height: 75, // Tinggi navbar
         child: Row(

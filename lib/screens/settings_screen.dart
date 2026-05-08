@@ -1,44 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'login_screen.dart'; 
-import 'home_screen.dart';  
+import 'login_screen.dart';
+import 'home_screen.dart';
 import 'personalisasi_screen.dart';
+import '../services/api_service.dart';
+import '../services/auth_manager.dart';
+import '../models/user.dart';
 
 class UserProfile {
   final String name;
-  final String userId;
   final String? avatarUrl;
 
   const UserProfile({
     required this.name,
-    required this.userId,
     this.avatarUrl,
   });
-
-  static const dummy = UserProfile(
-    name: 'LEE SANGWON',
-    userId: '08****1234',
-    avatarUrl: null,
-  );
-
-  String get initials {
-    final parts = name.trim().split(' ');
-    return parts.length >= 2
-        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
-        : name.substring(0, 2).toUpperCase();
-  }
 }
 
 // MAIN SCREEN
 // ─────────────────────────────────────────────
 class SettingsScreen extends StatefulWidget {
   final bool isLoggedIn;
-  final UserProfile? profile;
 
   const SettingsScreen({
     super.key,
-    this.isLoggedIn = false,    
-    this.profile,       
+    this.isLoggedIn = false,
   });
 
   @override
@@ -46,15 +32,30 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late UserProfile? _activeProfile;
+  UserModel? _user;
   bool _isLoading = false;
+  bool _isLoadingProfile = false;
 
   @override
   void initState() {
     super.initState();
-    _activeProfile = widget.isLoggedIn
-        ? (widget.profile ?? UserProfile.dummy)
-        : null;
+    if (widget.isLoggedIn) {
+      _fetchProfile();
+    }
+  }
+
+  Future<void> _fetchProfile() async {
+    setState(() => _isLoadingProfile = true);
+    try {
+      final data = await ApiService.getProfile();
+      if (data != null && mounted) {
+        setState(() => _user = UserModel.fromJson(data));
+      }
+    } catch (_) {
+      // Gagal fetch, tetap tampil loading selesai
+    } finally {
+      if (mounted) setState(() => _isLoadingProfile = false);
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -72,7 +73,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Keluar',
-                style: TextStyle(color: Color(0xFFD90002), fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Color(0xFFD90002), fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -81,15 +83,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // TODO: ganti dengan call EP-2
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Hapus token dari local storage
+      await AuthManager.clearToken();
 
       if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const OctoHomeScreen()),
-            (_) => false,
-          );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const OctoHomeScreen()),
+          (_) => false,
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -115,18 +117,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
 
                 // Profile section
-                widget.isLoggedIn && _activeProfile != null
+                widget.isLoggedIn
                     ? _ProfileLoggedIn(
-                        profile: _activeProfile!,
+                        user: _user,
+                        isLoading: _isLoadingProfile,
                       )
                     : _ProfileGuest(
                         onLoginTap: () {
-                          Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => const LoginScreen()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const LoginScreen()),
+                          );
                         },
                       ),
 
-                // Menu sections
                 _SectionBlock(
                   iconPath: 'assets/icons/InformasiPribadi.svg',
                   label: 'Informasi Pribadi',
@@ -148,8 +153,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       subtitle:
                           'Atur bagaimana kami menyesuaikan fitur dan promo berdasarkan kebutuhan Anda.',
                       onTap: () {
-                        Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const PersonalisasiScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const PersonalisasiScreen()),
+                        );
                       },
                       badge: 'Baru',
                     ),
@@ -185,7 +193,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     _MenuItemData(
                       title: 'Pengaturan Alias BI FAST',
-                      subtitle: 'Buat atau ubah alias untuk transaksi BI FAST Anda.',
+                      subtitle:
+                          'Buat atau ubah alias untuk transaksi BI FAST Anda.',
                       onTap: () {},
                     ),
                     _MenuItemData(
@@ -204,14 +213,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   items: [
                     _MenuItemData(
                       title: 'Kelola Notifikasi',
-                      subtitle: 'Atur bagaimana Anda ingin menerima berita dan notifikasi.',
-                      onTap: () {
-                      },
+                      subtitle:
+                          'Atur bagaimana Anda ingin menerima berita dan notifikasi.',
+                      onTap: () {},
                     ),
                   ],
                 ),
 
-                // Tampilan & Lainnya
                 _SectionBlock(
                   iconPath: 'assets/icons/InformasiPribadi.svg',
                   label: 'Tampilan & Lainnya',
@@ -234,13 +242,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     _MenuItemData(
                       title: 'Hapus Akses Aplikasi OCTO',
-                      subtitle: 'Menghapus akses akun dari aplikasi di perangkat ini.',
+                      subtitle:
+                          'Menghapus akses akun dari aplikasi di perangkat ini.',
                       onTap: () {},
                     ),
                   ],
                 ),
 
-                // Tombol Keluar
                 if (widget.isLoggedIn) ...[
                   const SizedBox(height: 8),
                   Padding(
@@ -315,11 +323,13 @@ class _SettingsHeader extends StatelessWidget {
 // PROFIL (SUDAH LOGIN)
 // ─────────────────────────────────────────────
 class _ProfileLoggedIn extends StatelessWidget {
-  final UserProfile profile;
+  final UserModel? user;
+  final bool isLoading;
   final VoidCallback? onAvatarTap;
 
   const _ProfileLoggedIn({
-    required this.profile,
+    required this.user,
+    this.isLoading = false,
     this.onAvatarTap,
   });
 
@@ -327,32 +337,18 @@ class _ProfileLoggedIn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Avatar
         SizedBox(
           width: 85,
           height: 85,
           child: Stack(
             children: [
               ClipOval(
-                child: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
-                    ? Image.network(
-                        profile.avatarUrl!,
-                        width: 85,
-                        height: 85,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Image.asset(
-                          'assets/octo/octo-profile.png',
-                          width: 85,
-                          height: 85,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Image.asset(
-                        'assets/octo/octo-profile.png',
-                        width: 85,
-                        height: 85,
-                        fit: BoxFit.cover,
-                      ),
+                child: Image.asset(
+                  'assets/octo/octo-profile.png',
+                  width: 85,
+                  height: 85,
+                  fit: BoxFit.cover,
+                ),
               ),
               Positioned(
                 bottom: 0,
@@ -372,7 +368,8 @@ class _ProfileLoggedIn extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.grey),
+                    child: const Icon(Icons.camera_alt,
+                        size: 14, color: Colors.grey),
                   ),
                 ),
               ),
@@ -382,45 +379,28 @@ class _ProfileLoggedIn extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        Text(
-          profile.name,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1A1A1A),
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'ID: ${profile.userId}',
-          style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
-        ),
-      ],
-    );
-  }
+        // Nama
+        isLoading || user == null
+            ? Container(
+                width: 140,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              )
+            : Text(
+                user!.displayName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A1A),
+                  letterSpacing: 0.5,
+                ),
+              ),
 
-  Widget _buildInitials(String initials) {
-    return Container(
-      width: 85,
-      height: 85,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFCDD2), Color(0xFFEF9A9A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFFC80000),
-        ),
-      ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 }
@@ -449,17 +429,18 @@ class _ProfileGuest extends StatelessWidget {
             ],
           ),
           child: ClipOval(
-            child: Image.asset('assets/octo/octo-profile.png', fit: BoxFit.cover),
+            child: Image.asset('assets/octo/octo-profile.png',
+                fit: BoxFit.cover),
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // Tombol Daftar atau Login
         GestureDetector(
           onTap: onLoginTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFFD90002), Color(0xFF9A0101)],
@@ -485,6 +466,8 @@ class _ProfileGuest extends StatelessWidget {
             ),
           ),
         ),
+
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -561,7 +544,10 @@ class _SectionBlock extends StatelessWidget {
                   children: [
                     _MenuTile(data: items[i]),
                     if (i < items.length - 1)
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+                      const Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: Color(0xFFF0F0F0)),
                   ],
                 );
               }),
@@ -605,10 +591,14 @@ class _MenuTile extends StatelessWidget {
                       if (data.badge != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFD90002), Color(0xFF9A0101)],
+                              colors: [
+                                Color(0xFFD90002),
+                                Color(0xFF9A0101)
+                              ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -618,7 +608,7 @@ class _MenuTile extends StatelessWidget {
                             data.badge!,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -639,7 +629,8 @@ class _MenuTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: Color(0xFF980201), size: 22),
+            const Icon(Icons.chevron_right,
+                color: Color(0xFF980201), size: 22),
           ],
         ),
       ),
@@ -671,7 +662,8 @@ class _LogoutButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Row(
             children: [
               Container(
@@ -681,7 +673,8 @@ class _LogoutButton extends StatelessWidget {
                   color: const Color(0xFFFFF0F0),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.logout, color: Color(0xFFD90002), size: 18),
+                child: const Icon(Icons.logout,
+                    color: Color(0xFFD90002), size: 18),
               ),
               const SizedBox(width: 14),
               const Text(

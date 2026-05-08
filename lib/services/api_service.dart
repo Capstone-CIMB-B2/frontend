@@ -27,7 +27,7 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
-        'email': email,
+        'email_address': email,
         'password': password,
       }),
     );
@@ -105,4 +105,19 @@ class ApiService {
     }
     return null;
   }
+
+  static Future<bool> updateConsent(bool consent) async {
+  final token = await AuthManager.getToken();
+  if (token == null) return false;
+
+  final response = await http.patch(
+    Uri.parse('$baseUrl/profile/consent'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({'consent_personalization': consent}),
+  );
+  return response.statusCode == 200;
+}
 }

@@ -7,17 +7,6 @@ import '../widgets/personalization_banner.dart';
 import 'personalisasi_screen.dart';
 import '../services/api_service.dart';
 
-// DUMMY DATA
-// ─────────────────────────────────────────────
-class DummyUser {
-  static const String name = 'Lee Sangwon';
-  static const String userId = 'sangwon99';
-  static const String accountNumber = '••••1854';
-  static const double ewalletBalance = 2_450_000;
-  static const double savingsBalance = 18_750_500;
-  static const String profileImage = 'assets/octo/octo-profile.png';
-}
-
 // HELPER
 // ─────────────────────────────────────────────
 String formatCurrency(double amount) {
@@ -26,7 +15,6 @@ String formatCurrency(double amount) {
 
 // HOME SCREEN (BELUM LOGIN)
 // ─────────────────────────────────────────────
-
 class OctoHomeScreen extends StatefulWidget {
   const OctoHomeScreen({super.key});
 
@@ -85,11 +73,7 @@ class _HomeContentState extends State<_HomeContent> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+        Positioned.fill(
           child: Column(
             children: [
               SizedBox(
@@ -341,14 +325,7 @@ class _OctoHomeScreenLoggedInState extends State<OctoHomeScreenLoggedIn> {
     _HomeContentLoggedIn(),
     Center(child: Text('Halaman My Account')),
     Center(child: Text('Halaman Wealth')),
-    SettingsScreen(
-      isLoggedIn: true,
-      profile: UserProfile(
-        name: DummyUser.name,
-        userId: DummyUser.userId,
-        avatarUrl: null,
-      ),
-    ),
+    SettingsScreen(isLoggedIn: true),
   ];
 
   @override
@@ -378,7 +355,11 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
   int _selectedTab = 0;
   bool _balanceVisible = false;
 
-    String _userName = '...';
+  // Data dari API
+  String _userName = '...';
+  String _accountNumber = '';
+  double _accountBalance = 0.0;
+  bool _isLoadingProfile = true;
 
   @override
   void initState() {
@@ -394,10 +375,24 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
   Future<void> _loadProfile() async {
     final profile = await ApiService.getProfile();
     if (profile != null && mounted) {
-      setState(() => _userName = profile['full_name'] ?? '-');
+      setState(() {
+        _userName = profile['full_name'] ?? '-';
+        _accountNumber = profile['account_number'] ?? '';
+        _accountBalance = (profile['account_balance'] ?? 0.0).toDouble();
+        _isLoadingProfile = false;
+      });
+    } else {
+      setState(() => _isLoadingProfile = false);
     }
   }
 
+  // Masking nomor rekening: tampilkan 4 digit terakhir saja
+  String get _accountMasked {
+    if (_accountNumber.length >= 4) {
+      return '(••••${_accountNumber.substring(_accountNumber.length - 4)})';
+    }
+    return '(••••)';
+  }
 
   void _showPersonalizationDialog() {
     showDialog(
@@ -436,9 +431,9 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                 ),
                 const SizedBox(height: 24),
                 GestureDetector(
-                  onTap: () {
-                    isPersonalizationEnabledNotifier.value = true;
-                    Navigator.pop(ctx);
+                  onTap: () async {
+                    await ApiService.updateConsent(true); 
+                    if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: Container(
                     width: double.infinity,
@@ -464,9 +459,7 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                  },
+                  onPressed: () => Navigator.pop(ctx),
                   child: const Text(
                     'Nanti Saja',
                     style: TextStyle(
@@ -488,11 +481,7 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+        Positioned.fill(
           child: Column(
             children: [
               SizedBox(
@@ -537,8 +526,12 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                                 style: TextStyle(fontWeight: FontWeight.w400),
                               ),
                               TextSpan(
-                                text: '${_userName.toUpperCase()}!',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                text: _isLoadingProfile
+                                    ? '...'
+                                    : '${_userName.toUpperCase()}!',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -565,6 +558,11 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                           Column(
                             children: [
                               _AccountCard(
+                                isLoading: _isLoadingProfile,
+                                accountName: _userName,
+                                accountNumber: _accountNumber,
+                                accountMasked: _accountMasked,
+                                balance: _accountBalance,
                                 balanceVisible: _balanceVisible,
                                 onToggleBalance: () => setState(
                                   () => _balanceVisible = !_balanceVisible,
@@ -585,7 +583,10 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                                 isLoggedIn: true,
                               ),
                               const SizedBox(height: 24),
-                              _EWalletSection(balanceVisible: _balanceVisible),
+                              _EWalletSection(
+                                balanceVisible: _balanceVisible,
+                                balance: _accountBalance,
+                              ),
                               const SizedBox(height: 24),
                               const _NewsSection(),
                               const SizedBox(height: 100),
@@ -681,7 +682,7 @@ class _TopBarLoggedIn extends StatelessWidget {
               child: const Center(
                 child: CircleAvatar(
                   radius: 21,
-                  backgroundImage: AssetImage(DummyUser.profileImage),
+                  backgroundImage: AssetImage('assets/octo/octo-profile.png'),
                 ),
               ),
             ),
@@ -696,9 +697,20 @@ class _TopBarLoggedIn extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _AccountCard extends StatefulWidget {
   const _AccountCard({
+    required this.isLoading,
+    required this.accountName,
+    required this.accountNumber,
+    required this.accountMasked,
+    required this.balance,
     required this.balanceVisible,
     required this.onToggleBalance,
   });
+
+  final bool isLoading;
+  final String accountName;
+  final String accountNumber;
+  final String accountMasked;
+  final double balance;
   final bool balanceVisible;
   final VoidCallback onToggleBalance;
 
@@ -710,27 +722,47 @@ class _AccountCardState extends State<_AccountCard> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  static const _cards = [
-    {
-      'type': 'E-Wallet',
-      'badgeColor': Color(0xFF1A5C4A),
-      'name': 'OCTO Pay',
-      'accountMasked': '(••••1854)',
-      'accountFull': '(5271 8321 0012 1854)',
-      'balance': DummyUser.ewalletBalance,
-    },
-    {
-      'type': 'Tabungan',
-      'badgeColor': Color(0xFF4A0000),
-      'name': 'TabunganKu',
-      'accountMasked': '(••••9201)',
-      'accountFull': '(800 234 5678 9201)',
-      'balance': DummyUser.savingsBalance,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    if (widget.isLoading) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        height: 140,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF7B0000),
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    final cards = [
+      {
+        'type': 'Tabungan',
+        'badgeColor': const Color(0xFF1A5C4A),
+        'name': 'Tabungan Xtra',
+        'accountDisplay': widget.balanceVisible
+            ? widget.accountNumber
+            : widget.accountMasked,
+        'balance': widget.balance,
+      },
+      //  DUMMY - E-Wallet card (uncomment kalau sudah ada data real)
+      // {
+      //   'type': 'E-Wallet',
+      //   'badgeColor': const Color(0xFF4A0000),
+      //   'name': 'OCTO Pay',
+      //   'accountDisplay': widget.balanceVisible
+      //       ? '(5271 8321 0012 1854)'
+      //       : '(••••1854)',
+      //   'balance': 2450000.0,
+      // },
+    ];
+
     return Column(
       children: [
         SizedBox(
@@ -738,13 +770,9 @@ class _AccountCardState extends State<_AccountCard> {
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (i) => setState(() => _currentPage = i),
-            itemCount: _cards.length,
+            itemCount: cards.length,
             itemBuilder: (context, index) {
-              final card = _cards[index];
-              final accountDisplay = widget.balanceVisible
-                  ? card['accountFull'] as String
-                  : card['accountMasked'] as String;
-
+              final card = cards[index];
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.symmetric(
@@ -789,7 +817,6 @@ class _AccountCardState extends State<_AccountCard> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 10),
 
                           // Nama & No Rek
@@ -797,7 +824,7 @@ class _AccountCardState extends State<_AccountCard> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  '${card['name']} $accountDisplay',
+                                  '${card['name']} ${card['accountDisplay']}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -814,7 +841,6 @@ class _AccountCardState extends State<_AccountCard> {
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 10),
 
                           // Saldo
@@ -846,7 +872,6 @@ class _AccountCardState extends State<_AccountCard> {
                         ],
                       ),
                     ),
-
                     const SizedBox(width: 12),
 
                     // Tombol Top Up
@@ -868,7 +893,7 @@ class _AccountCardState extends State<_AccountCard> {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Top Up',
+                          'Transfer',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -885,23 +910,25 @@ class _AccountCardState extends State<_AccountCard> {
         ),
 
         // Dot indicator
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_cards.length, (i) {
-            return Container(
-              width: _currentPage == i ? 16 : 6,
-              height: 6,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              decoration: BoxDecoration(
-                color: _currentPage == i
-                    ? const Color(0xFF7B0000)
-                    : Colors.grey[300],
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
-        ),
+        if (cards.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(cards.length, (i) {
+              return Container(
+                width: _currentPage == i ? 16 : 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: _currentPage == i
+                      ? const Color(0xFF7B0000)
+                      : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
       ],
     );
   }
@@ -992,8 +1019,9 @@ class _NotifBannerState extends State<_NotifBanner> {
 // E-WALLET SECTION
 // ─────────────────────────────────────────────
 class _EWalletSection extends StatelessWidget {
-  const _EWalletSection({required this.balanceVisible});
+  const _EWalletSection({required this.balanceVisible, required this.balance});
   final bool balanceVisible;
+  final double balance;
 
   @override
   Widget build(BuildContext context) {
@@ -1011,7 +1039,7 @@ class _EWalletSection extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Card Octopay
+                // Card OCTO Pay
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -1042,10 +1070,8 @@ class _EWalletSection extends StatelessWidget {
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: Colors.white, // solid putih
-                                borderRadius: BorderRadius.circular(
-                                  10,
-                                ), // ← lebih besar biar keliatan rounded
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.08),
@@ -1062,9 +1088,7 @@ class _EWalletSection extends StatelessWidget {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 24),
-
                         Row(
                           children: [
                             const Icon(
@@ -1075,7 +1099,7 @@ class _EWalletSection extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               balanceVisible
-                                  ? 'IDR ${formatCurrency(DummyUser.ewalletBalance)}'
+                                  ? formatCurrency(balance)
                                   : 'IDR •••',
                               style: const TextStyle(
                                 fontSize: 18,
@@ -1089,10 +1113,9 @@ class _EWalletSection extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 12),
 
-                // Card Gopay
+                // Card GoPay
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -1108,7 +1131,6 @@ class _EWalletSection extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // GoPay row
                         Row(
                           children: [
                             SvgPicture.asset(
@@ -1126,10 +1148,7 @@ class _EWalletSection extends StatelessWidget {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 24),
-
-                        // Connect button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1174,9 +1193,6 @@ class _EWalletSection extends StatelessWidget {
 // SHARED WIDGETS
 // ================================================================
 
-// ─────────────────────────────────────────────
-// LOGO
-// ─────────────────────────────────────────────
 class OctoLogo extends StatelessWidget {
   const OctoLogo({super.key});
 
@@ -1190,8 +1206,6 @@ class OctoLogo extends StatelessWidget {
   }
 }
 
-// ICON BUTTON
-// ─────────────────────────────────────────────
 class _IconBtn extends StatelessWidget {
   const _IconBtn({required this.svgPath, required this.onTap});
   final String svgPath;
@@ -1214,8 +1228,6 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-// TABS MENU
-// ─────────────────────────────────────────────
 class _MenuTabs extends StatelessWidget {
   const _MenuTabs({required this.selected, required this.onSelect});
   final int selected;
@@ -1262,15 +1274,12 @@ class _MenuTabs extends StatelessWidget {
   }
 }
 
-// GRID MENU
-// ─────────────────────────────────────────────
 class _MenuGrid extends StatelessWidget {
   const _MenuGrid({required this.tabIndex, required this.isLoggedIn});
   final int tabIndex;
   final bool isLoggedIn;
 
   static const List<List<Map<String, dynamic>>> _menus = [
-    // Section 1: Untukmu
     [
       {'label': 'Transfer', 'icon': 'assets/icons/Transfer.svg'},
       {'label': 'Tagihan &\nIsi Ulang', 'icon': 'assets/icons/Tagihan.svg'},
@@ -1291,7 +1300,6 @@ class _MenuGrid extends StatelessWidget {
         'icon': 'assets/icons/TabunganDeposito.svg',
       },
     ],
-    // Section 2: Transaksi
     [
       {'label': 'Transfer', 'icon': 'assets/icons/Transfer.svg'},
       {'label': 'Tagihan &\nIsi Ulang', 'icon': 'assets/icons/Tagihan.svg'},
@@ -1313,7 +1321,6 @@ class _MenuGrid extends StatelessWidget {
       },
       {'label': 'Pembayaran\nNFC', 'icon': 'assets/icons/PembayaranNFC.svg'},
     ],
-    // Section 3: Produk
     [
       {'label': 'Investasi', 'icon': 'assets/icons/investasi.svg'},
       {
@@ -1325,7 +1332,6 @@ class _MenuGrid extends StatelessWidget {
         'icon': 'assets/icons/PinjamanKredit.svg',
       },
     ],
-    // Section 4: Lainnya
     [
       {
         'label': 'Pengaturan\nKartu',
@@ -1345,7 +1351,6 @@ class _MenuGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = List<Map<String, dynamic>>.from(_menus[tabIndex]);
-
     if (isLoggedIn && tabIndex == 0) {
       items.add({'label': 'Adjust\nFavorite', 'icon': null, 'isAdjust': true});
     }
