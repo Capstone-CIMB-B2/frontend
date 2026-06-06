@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/promo_response.dart';
+import '../models/transaction_response.dart';
 import 'auth_manager.dart';
 
 class ApiService {
@@ -10,7 +11,7 @@ class ApiService {
     if (kIsWeb) {
       return 'http://127.0.0.1:8000';
     } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8000';
+      return 'http://192.168.2.243:8000';
     } else {
       return 'http://localhost:8000';
     }
@@ -107,17 +108,240 @@ class ApiService {
   }
 
   static Future<bool> updateConsent(bool consent) async {
-  final token = await AuthManager.getToken();
-  if (token == null) return false;
+    final token = await AuthManager.getToken();
+    if (token == null) return false;
 
-  final response = await http.patch(
-    Uri.parse('$baseUrl/profile/consent'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: jsonEncode({'consent_personalization': consent}),
-  );
-  return response.statusCode == 200;
+    final response = await http.patch(
+      Uri.parse('$baseUrl/profile/consent'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'consent_personalization': consent}),
+    );
+    return response.statusCode == 200;
+  }
+
+  static Future<Map<String, dynamic>?> transfer({
+    required String recipientName,
+    required String recipientBank,
+    required String recipientAccount,
+    required double amount,
+    required String notes,
+    required String pin,
+  }) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/transfer'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'recipient_name': recipientName,
+          'recipient_bank': recipientBank,
+          'recipient_account': recipientAccount,
+          'amount': amount,
+          'notes': notes,
+          'pin': pin,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'new_balance': responseData['new_balance'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['detail'] ?? 'Terjadi kesalahan saat transfer',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal menghubungkan ke server: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>?> createTransaction({
+    required String category,
+    required String merchantName,
+    required String transactionMethod,
+    required double amount,
+    required String notes,
+    required String pin,
+  }) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/transaction'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'category': category,
+          'merchant_name': merchantName,
+          'transaction_method': transactionMethod,
+          'amount': amount,
+          'notes': notes,
+          'pin': pin,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'new_balance': responseData['new_balance'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['detail'] ?? 'Terjadi kesalahan saat memproses transaksi',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal menghubungkan ke server: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>?> decodeQr(String payload) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/qr/decode/$payload'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      // silent fail
+    }
+    return null;
+  }
+
+
+
+  static Future<Map<String, dynamic>?> validateAccount({
+    required String bankName,
+    required String accountNumber,
+  }) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/validate-account'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'bank_name': bankName,
+          'account_number': accountNumber,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'account_name': responseData['account_name'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['detail'] ?? 'Nomor rekening tidak ditemukan!',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal menghubungkan ke server: $e',
+      };
+    }
+  }
+
+  // 6. Get Recent Transactions
+  static Future<List<TransactionResponse>?> getRecentTransactions({
+    int limit = 5,
+  }) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/transactions/recent?limit=$limit'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final List<dynamic>? trxList = responseData['transactions'];
+        if (trxList != null) {
+          return trxList.map((x) => TransactionResponse.fromJson(x)).toList();
+        }
+      }
+    } catch (e) {
+      // Silent error fallback
+    }
+  }
+
+  static int? _sessionId;
+  static int get sessionId {
+    _sessionId ??= 100000 + DateTime.now().millisecond + (DateTime.now().microsecond % 900000);
+    return _sessionId!;
+  }
+
+  // 7. Track User Interaction
+  static Future<bool> trackInteraction({
+    required String featureAccessed,
+    required String action,
+    String? interactionType,
+  }) async {
+    try {
+      final profile = await getProfile();
+      final int? userId = profile != null ? profile['user_id'] : null;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/track'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'session_id': sessionId.toString(),
+          'feature_accessed': featureAccessed,
+          'action': action,
+          'interaction_type': interactionType,
+        }),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      // silent fail
+    }
+    return false;
+  }
 }
-}
+

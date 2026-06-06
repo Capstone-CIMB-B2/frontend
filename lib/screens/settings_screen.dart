@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
 import 'personalisasi_screen.dart';
 import '../services/api_service.dart';
 import '../services/auth_manager.dart';
@@ -89,7 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const OctoHomeScreen()),
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
           (_) => false,
         );
       }

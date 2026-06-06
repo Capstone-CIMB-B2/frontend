@@ -15,6 +15,7 @@ dependencies:
   http: ^1.2.0
   shared_preferences: ^2.5.5
   flutter_typeahead: ^5.2.0
+  mobile_scanner: ^5.2.3
 
 dev_dependencies:
   flutter_test:
@@ -30,7 +31,10 @@ flutter:
     - assets/icon-logout.svg
     - assets/gopay-logo.svg
     - assets/icons/
-    - assets/banner/
+    - assets/icons/tagihan/
+    - assets/logo/
+    - assets/banner/promosi/
+    - assets/banner/berita/
     - assets/background/
     - assets/octo/
 

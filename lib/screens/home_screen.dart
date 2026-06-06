@@ -6,309 +6,12 @@ import 'login_screen.dart';
 import '../widgets/personalization_banner.dart';
 import 'personalisasi_screen.dart';
 import '../services/api_service.dart';
+import '../models/transaction_response.dart';
 
-// HELPER
-// ─────────────────────────────────────────────
 String formatCurrency(double amount) {
   return 'IDR ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
 }
 
-// HOME SCREEN (BELUM LOGIN)
-// ─────────────────────────────────────────────
-class OctoHomeScreen extends StatefulWidget {
-  const OctoHomeScreen({super.key});
-
-  @override
-  State<OctoHomeScreen> createState() => _OctoHomeScreenState();
-}
-
-class _OctoHomeScreenState extends State<OctoHomeScreen> {
-  int _bottomNav = 0;
-
-  void changeTab(int index) => setState(() => _bottomNav = index);
-
-  final List<Widget> _pages = const [
-    _HomeContent(),
-    Center(child: Text('Halaman My Account')),
-    Center(child: Text('Halaman Wealth')),
-    SettingsScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      extendBody: true,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: QrisFab(onTap: () {}),
-      bottomNavigationBar: OctoBottomNavBar(
-        selected: _bottomNav,
-        onSelect: (i) {
-          if (i == 1 || i == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          } else {
-            setState(() => _bottomNav = i);
-          }
-        },
-      ),
-      body: IndexedStack(index: _bottomNav, children: _pages),
-    );
-  }
-}
-
-class _HomeContent extends StatefulWidget {
-  const _HomeContent();
-
-  @override
-  State<_HomeContent> createState() => _HomeContentState();
-}
-
-class _HomeContentState extends State<_HomeContent> {
-  int _selectedTab = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Column(
-            children: [
-              SizedBox(
-                height: 280,
-                child: Image.asset(
-                  'assets/background/bg-beranda.png',
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
-              ),
-              const Expanded(child: ColoredBox(color: Colors.white)),
-            ],
-          ),
-        ),
-        SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              const _TopBar(),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: RichText(
-                          text: const TextSpan(
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                            children: [
-                              TextSpan(
-                                text: 'Selamat siang, ',
-                                style: TextStyle(fontWeight: FontWeight.w400),
-                              ),
-                              TextSpan(
-                                text: 'Apa Kabar?',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Stack(
-                        children: [
-                          Positioned(
-                            top: 50,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(24),
-                                  topRight: Radius.circular(24),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Column(
-                            children: [
-                              _LoginBanner(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LoginScreen(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _MenuTabs(
-                                selected: _selectedTab,
-                                onSelect: (i) =>
-                                    setState(() => _selectedTab = i),
-                              ),
-                              _MenuGrid(
-                                tabIndex: _selectedTab,
-                                isLoggedIn: false,
-                              ),
-                              const SizedBox(height: 24),
-                              const _NewsSection(),
-                              const SizedBox(height: 100),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// HEADER (BELUM LOGIN)
-// ─────────────────────────────────────────────
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          const OctoLogo(),
-          const Spacer(),
-          _IconBtn(svgPath: 'assets/icon-search.svg', onTap: () {}),
-          _IconBtn(svgPath: 'assets/icon-notification.svg', onTap: () {}),
-          const SizedBox(width: 5),
-          GestureDetector(
-            onTap: () => context
-                .findAncestorStateOfType<_OctoHomeScreenState>()
-                ?.changeTab(3),
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
-              child: const Center(
-                child: CircleAvatar(
-                  radius: 21,
-                  backgroundImage: AssetImage('assets/octo/octo-profile.png'),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// BANNER (BELUM LOGIN)
-// ─────────────────────────────────────────────
-class _LoginBanner extends StatelessWidget {
-  const _LoginBanner({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              padding: const EdgeInsets.only(
-                left: 80,
-                right: 16,
-                top: 25,
-                bottom: 25,
-              ),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFFFEFFFF), Color(0xFFFFCECF)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Siap untuk menjelajah?',
-                          style: TextStyle(fontSize: 12, color: Colors.black),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Login atau buat rekening pertama',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.chevron_right,
-                      color: Color(0xFFCC0000),
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: Image.asset(
-                'assets/octo/octo-homepage.png',
-                height: 85,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// HOME SCREEN (SUDAH LOGIN)
-// ─────────────────────────────────────────────
 class OctoHomeScreenLoggedIn extends StatefulWidget {
   const OctoHomeScreenLoggedIn({super.key});
 
@@ -334,7 +37,12 @@ class _OctoHomeScreenLoggedInState extends State<OctoHomeScreenLoggedIn> {
       backgroundColor: Colors.white,
       extendBody: true,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: QrisFab(onTap: () {}),
+      floatingActionButton: QrisFab(
+        onTap: () {
+          Navigator.pushNamed(context, '/qris');
+        },
+      ),
+
       bottomNavigationBar: OctoBottomNavBar(
         selected: _bottomNav,
         onSelect: (i) => setState(() => _bottomNav = i),
@@ -355,32 +63,53 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
   int _selectedTab = 0;
   bool _balanceVisible = false;
 
-  // Data dari API
   String _userName = '...';
   String _accountNumber = '';
   double _accountBalance = 0.0;
   bool _isLoadingProfile = true;
 
+  List<TransactionResponse> _transactions = [];
+  bool _isLoadingTransactions = true;
+
   @override
   void initState() {
     super.initState();
     _loadProfile();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!isPersonalizationEnabledNotifier.value) {
-        _showPersonalizationDialog();
-      }
-    });
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() => _isLoadingTransactions = true);
+    final trxs = await ApiService.getRecentTransactions(limit: 5);
+    if (mounted) {
+      setState(() {
+        if (trxs != null) {
+          _transactions = trxs;
+        }
+        _isLoadingTransactions = false;
+      });
+    }
   }
 
   Future<void> _loadProfile() async {
     final profile = await ApiService.getProfile();
     if (profile != null && mounted) {
+      final bool consent = profile['consent_personalization'] ?? false;
+
+      // Update nilai notifier global dengan status dari backend
+      isPersonalizationEnabledNotifier.value = consent;
+
       setState(() {
         _userName = profile['full_name'] ?? '-';
         _accountNumber = profile['account_number'] ?? '';
         _accountBalance = (profile['account_balance'] ?? 0.0).toDouble();
         _isLoadingProfile = false;
       });
+
+      // Hanya tampilkan popup jika pengguna belum menyetujui personalisasi
+      if (!consent) {
+        _showPersonalizationDialog();
+      }
     } else {
       setState(() => _isLoadingProfile = false);
     }
@@ -392,6 +121,20 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
       return '(••••${_accountNumber.substring(_accountNumber.length - 4)})';
     }
     return '(••••)';
+  }
+
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 11) {
+      return 'Selamat pagi';
+    } else if (hour >= 11 && hour < 15) {
+      return 'Selamat siang';
+    } else if (hour >= 15 && hour < 18) {
+      return 'Selamat sore';
+    } else {
+      return 'Selamat malam';
+    }
   }
 
   void _showPersonalizationDialog() {
@@ -432,7 +175,7 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                 const SizedBox(height: 24),
                 GestureDetector(
                   onTap: () async {
-                    await ApiService.updateConsent(true); 
+                    await ApiService.updateConsent(true);
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: Container(
@@ -521,8 +264,8 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                               fontSize: 16,
                             ),
                             children: [
-                              const TextSpan(
-                                text: 'Selamat siang, ',
+                              TextSpan(
+                                text: '${getGreeting()}, ',
                                 style: TextStyle(fontWeight: FontWeight.w400),
                               ),
                               TextSpan(
@@ -588,6 +331,11 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                                 balance: _accountBalance,
                               ),
                               const SizedBox(height: 24),
+                              _RecentTransactionsSection(
+                                isLoading: _isLoadingTransactions,
+                                transactions: _transactions,
+                              ),
+                              const SizedBox(height: 24),
                               const _NewsSection(),
                               const SizedBox(height: 100),
                             ],
@@ -615,7 +363,7 @@ class _TopBarLoggedIn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
           const OctoLogo(),
@@ -663,7 +411,7 @@ class _TopBarLoggedIn extends StatelessWidget {
               if (confirm == true && context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const OctoHomeScreen()),
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (_) => false,
                 );
               }
@@ -875,32 +623,35 @@ class _AccountCardState extends State<_AccountCard> {
                     const SizedBox(width: 12),
 
                     // Tombol Top Up
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7B0000),
-                            borderRadius: BorderRadius.circular(12),
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/transfer'),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7B0000),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 26,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.add,
-                            color: Colors.white,
-                            size: 26,
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Transfer',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Transfer',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1374,7 +1125,23 @@ class _MenuGrid extends StatelessWidget {
                       : _MenuItem(
                           label: item['label'] as String,
                           icon: item['icon'] as String,
-                          onTap: () {},
+                          onTap: () {
+                            if (item['label'] == 'Transfer') {
+                              ApiService.trackInteraction(
+                                featureAccessed: 'Transfer',
+                                action: 'click',
+                                interactionType: 'feature_click',
+                              );
+                              Navigator.pushNamed(context, '/transfer');
+                            } else if (item['label'] == 'Tagihan &\nIsi Ulang') {
+                              ApiService.trackInteraction(
+                                featureAccessed: 'Tagihan & Isi Ulang',
+                                action: 'click',
+                                interactionType: 'feature_click',
+                              );
+                              Navigator.pushNamed(context, '/tagihan');
+                            }
+                          },
                         ),
                 );
               }).toList(),
@@ -1485,7 +1252,10 @@ class _NewsSectionState extends State<_NewsSection> {
     {'image': 'assets/banner/Berita1.png', 'type': 'Berita'},
     {'image': 'assets/banner/Berita2.png', 'type': 'Berita'},
     {'image': 'assets/banner/Berita3.png', 'type': 'Berita'},
-    {'image': 'assets/banner/Promosi1.png', 'type': 'Promosi'},
+    {'image': 'assets/banner/promosi/octoloan-qris.jpg', 'type': 'Promosi'},
+    {'image': 'assets/banner/promosi/goalsavers-valas.png', 'type': 'Promosi'},
+    {'image': 'assets/banner/promosi/os-bifast.jpg', 'type': 'Promosi'},
+    {'image': 'assets/banner/promosi/mastercard-rev.jpg', 'type': 'Promosi'},
   ];
 
   @override
@@ -1578,3 +1348,242 @@ class _NewsSectionState extends State<_NewsSection> {
     );
   }
 }
+
+class _RecentTransactionsSection extends StatelessWidget {
+  const _RecentTransactionsSection({
+    required this.isLoading,
+    required this.transactions,
+  });
+
+  final bool isLoading;
+  final List<TransactionResponse> transactions;
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'food & beverage':
+      case 'f&b':
+        return Icons.restaurant_rounded;
+      case 'e-wallet':
+      case 'wallet':
+        return Icons.account_balance_wallet_rounded;
+      case 'transport & mobility':
+      case 'transport':
+      case 'transportasi':
+        return Icons.directions_car_rounded;
+      case 'utilities':
+      case 'tagihan':
+      case 'utility':
+        return Icons.bolt_rounded;
+      case 'lifestyle & entertainment':
+      case 'lifestyle':
+        return Icons.sports_esports_rounded;
+      default:
+        return Icons.payment_rounded;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'food & beverage':
+      case 'f&b':
+        return const Color(0xFFFFECE5); // Soft orange
+      case 'e-wallet':
+      case 'wallet':
+        return const Color(0xFFE5F1FF); // Soft blue
+      case 'transport & mobility':
+      case 'transport':
+      case 'transportasi':
+        return const Color(0xFFE5FFE6); // Soft green
+      case 'utilities':
+      case 'tagihan':
+      case 'utility':
+        return const Color(0xFFFFF9E5); // Soft yellow
+      case 'lifestyle & entertainment':
+      case 'lifestyle':
+        return const Color(0xFFF3E5FF); // Soft purple
+      default:
+        return const Color(0xFFF2F2F2); // Soft grey
+    }
+  }
+
+  Color _getCategoryIconColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'food & beverage':
+      case 'f&b':
+        return const Color(0xFFE05315);
+      case 'e-wallet':
+      case 'wallet':
+        return const Color(0xFF0F75BD);
+      case 'transport & mobility':
+      case 'transport':
+      case 'transportasi':
+        return const Color(0xFF2E8540);
+      case 'utilities':
+      case 'tagihan':
+      case 'utility':
+        return const Color(0xFFBF8F00);
+      case 'lifestyle & entertainment':
+      case 'lifestyle':
+        return const Color(0xFF8B25C6);
+      default:
+        return const Color(0xFF666666);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Aktivitas Terakhir',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFEFEFEF)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: _buildContent(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF7B0000),
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    if (transactions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Column(
+            children: [
+              const Icon(
+                Icons.history_toggle_off_rounded,
+                color: Colors.grey,
+                size: 40,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Belum ada transaksi terakhir',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: transactions.length,
+      separatorBuilder: (_, __) => const Divider(
+        color: Color(0xFFF5F5F5),
+        height: 24,
+        thickness: 1,
+      ),
+      itemBuilder: (context, index) {
+        final trx = transactions[index];
+        final cat = trx.category;
+        final icon = _getCategoryIcon(cat);
+        final bgColor = _getCategoryColor(cat);
+        final iconColor = _getCategoryIconColor(cat);
+
+        final displayDate = trx.timestamp.length >= 10
+            ? trx.timestamp.substring(0, 10)
+            : trx.timestamp;
+
+        return Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: 22,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trx.merchantName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$cat • $displayDate',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '- ${formatCurrency(trx.amount)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Color(0xFF7B0000),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
