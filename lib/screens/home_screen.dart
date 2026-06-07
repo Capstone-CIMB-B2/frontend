@@ -1477,13 +1477,13 @@ class _RecentTransactionsSection extends StatelessWidget {
               ),
             ],
           ),
-          child: _buildContent(),
+          child: _buildContent(context),
         ),
       ],
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),

@@ -29,14 +29,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
   double _accountBalance = 0.0;
   String _accountNumber = '';
   bool _isLoadingProfile = true;
+  bool _balanceVisible = false;
 
-  final List<double> _presetAmounts = [10000, 25000, 50000, 100000, 200000, 500000];
+  // Pulsa: selected preset index
+  int? _selectedPresetIndex;
+
+  // Pulsa preset amounts
+  final List<double> _pulsaPresets = [
+    15000, 25000, 30000, 40000, 50000, 75000, 100000, 150000,
+  ];
+
+
+
+  bool get _isPulsa => widget.transactionMethod == 'Pembelian Pulsa';
+  bool get _isTopUp => widget.transactionMethod == 'Top Up';
+  bool get _isTagihan => !_isPulsa && !_isTopUp;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
-
     _numberController.addListener(_validateInputs);
     _amountController.addListener(_validateInputs);
   }
@@ -45,7 +57,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final numText = _numberController.text.trim();
     final amountText = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final double amountVal = double.tryParse(amountText) ?? 0.0;
-
     setState(() {
       _isButtonEnabled = numText.length >= 5 && amountVal > 0;
     });
@@ -60,9 +71,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         _isLoadingProfile = false;
       });
     } else {
-      setState(() {
-        _isLoadingProfile = false;
-      });
+      setState(() => _isLoadingProfile = false);
     }
   }
 
@@ -80,22 +89,63 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
   }
 
-  String get _fieldLabel {
-    if (widget.transactionMethod == 'Top Up') {
-      return 'Nomor Handphone E-Wallet';
-    } else if (widget.transactionMethod == 'Pembelian Pulsa') {
-      return 'Nomor Handphone Tujuan';
-    } else {
-      return 'Nomor Pelanggan / Nomor Kontrak';
-    }
+  String get _numberFieldLabel {
+    if (_isTopUp) return 'Nomor E-Wallet';
+    if (_isPulsa) return 'Nomor Telepon';
+    return 'Nomor Pelanggan';
   }
 
-  String get _fieldHint {
-    if (widget.transactionMethod == 'Top Up' || widget.transactionMethod == 'Pembelian Pulsa') {
-      return 'Contoh: 081234567890';
-    } else {
-      return 'Contoh: 1234567890';
-    }
+  String get _numberFieldHint {
+    if (_isTopUp) return 'Masukkan Nomor E-Wallet';
+    if (_isPulsa) return 'Masukkan Nomor Telepon';
+    return 'Masukkan Nomor Pelanggan';
+  }
+
+  String get _nominalLabel {
+    if (_isTopUp) return 'Nominal Top Up';
+    if (_isPulsa) return 'Nominal Pulsa';
+    return 'Nominal Pembayaran';
+  }
+
+  IconData get _merchantIcon {
+    if (_isTopUp) return Icons.account_balance_wallet_outlined;
+    if (_isPulsa) return Icons.phone_android_outlined;
+    return Icons.receipt_long_outlined;
+  }
+
+  /// Key merchant — capitalize huruf pertama tiap kata, spasi dihapus.
+  /// Contoh: 'kopi kenangan' → 'KopiKenangan', 'gopay' → 'Gopay'
+  /// Sesuai konvensi nama file: Gopay.svg, IndiHome.svg, dst.
+  String get _merchantKey {
+    return widget.merchantName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .join();
+  }
+
+  /// Merchant yang punya asset SVG.
+  static const _svgMerchants = {
+    'Biznet', 'Dana', 'Gopay', 'Indihome', 'Indosat',
+    'Netflix', 'Pln', 'Shopeepay', 'Spotify', 'Telkomsel', 'Xl',
+  };
+
+  /// Merchant yang punya asset PNG.
+  static const _pngMerchants = {
+    'Ovo', 'Telkom', 'Youtube',
+  };
+
+  /// Tipe asset: 'svg', 'png', atau null jika tidak ada.
+  String? get _merchantAssetType {
+    if (_svgMerchants.contains(_merchantKey)) return 'svg';
+    if (_pngMerchants.contains(_merchantKey)) return 'png';
+    return null;
+  }
+
+  String? get _merchantAssetPath {
+    final type = _merchantAssetType;
+    if (type == null) return null;
+    return 'assets/logo/$_merchantKey.$type';
   }
 
   @override
@@ -106,6 +156,41 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.dispose();
   }
 
+  void _onSubmit() {
+    final double amtVal = double.tryParse(
+          _amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+        ) ??
+        0.0;
+    if (amtVal > _accountBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Saldo Anda tidak mencukupi untuk pembayaran ini.'),
+          backgroundColor: Color(0xFF8C0E1A),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KonfirmasiPinScreen(
+          recipientName: widget.merchantName,
+          recipientBank: widget.category,
+          recipientAccount: _numberController.text.trim(),
+          nominal: amtVal,
+          catatan: _isTopUp ? _catatanController.text : '',
+          transactionType: 'tagihan',
+          category: widget.category,
+          transactionMethod: widget.transactionMethod,
+        ),
+      ),
+    );
+  }
+
+  Widget get _fallbackIcon => Center(
+        child: Icon(_merchantIcon, color: const Color(0xFF8C0E1A), size: 26),
+      );
+
   @override
   Widget build(BuildContext context) {
     final double statusBarHeight = MediaQuery.of(context).padding.top;
@@ -115,7 +200,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // HEADER
+          // ── HEADER ────────────────────────────────────────────────────
           Positioned(
             top: 0,
             left: 0,
@@ -134,43 +219,43 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     SafeArea(
                       bottom: false,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                          child: Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () => Navigator.pop(context),
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.chevron_left,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 20,
+                        ),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.chevron_left,
+                                  color: Colors.white,
+                                  size: 28,
                                 ),
                               ),
-                              Expanded(
-                                child: Text(
-                                  widget.transactionMethod,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Calibri',
-                                  ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                widget.transactionMethod,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Calibri',
                                 ),
                               ),
-                              const SizedBox(width: 40),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 40),
+                          ],
                         ),
                       ),
                     ),
@@ -180,7 +265,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ),
 
-          // CONTENT
+          // ── CONTENT ───────────────────────────────────────────────────
           Positioned(
             top: headerHeight - 20,
             left: 0,
@@ -202,163 +287,181 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Merchant Details Card
+                          // ── MERCHANT CARD ──────────────────────────────
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3F3),
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFF0F0F2)),
+                              border: Border.all(
+                                color: const Color(0xFFE2E2E6),
+                                width: 1.2,
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(10),
+                                  width: 48,
+                                  height: 48,
                                   decoration: const BoxDecoration(
-                                    color: Colors.white,
+                                    color: Color(0xFFF3F3F3),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(
-                                    widget.transactionMethod == 'Top Up'
-                                        ? Icons.account_balance_wallet_outlined
-                                        : widget.transactionMethod == 'Pembelian Pulsa'
-                                            ? Icons.phone_android_outlined
-                                            : Icons.receipt_long_outlined,
-                                    color: const Color(0xFF8C0E1A),
-                                    size: 28,
+                                  child: ClipOval(
+                                    child: _merchantAssetPath != null
+                                        ? (_merchantAssetType == 'svg'
+                                            ? SvgPicture.asset(
+                                                _merchantAssetPath!,
+                                                width: 48,
+                                                height: 48,
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (_, __, ___) =>
+                                                    _fallbackIcon,
+                                              )
+                                            : Image.asset(
+                                                _merchantAssetPath!,
+                                                width: 48,
+                                                height: 48,
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (_, __, ___) =>
+                                                    _fallbackIcon,
+                                              ))
+                                        : _fallbackIcon,
                                   ),
                                 ),
                                 const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        widget.merchantName,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.merchantName,
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        widget.category,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      widget.category,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 24),
 
-                          // Customer Number Field
+                          // ── NOMOR FIELD ────────────────────────────────
                           Text(
-                            _fieldLabel,
+                            _numberFieldLabel,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
+                              fontFamily: 'Calibri',
                             ),
                           ),
                           const SizedBox(height: 10),
                           TextField(
                             controller: _numberController,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: InputDecoration(
-                              hintText: _fieldHint,
+                              hintText: _numberFieldHint,
+                              hintStyle: TextStyle(color: Colors.grey[400]),
                               filled: true,
                               fillColor: const Color(0xFFF5F5F7),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
                               ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),
 
-                          // Amount field
-                          const Text(
-                            'Pilih atau Masukkan Nominal (Rp)',
-                            style: TextStyle(
-                              fontSize: 16,
+                          // ── NOMINAL ────────────────────────────────────
+                          Text(
+                            _nominalLabel,
+                            style: const TextStyle(
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
+                              fontFamily: 'Calibri',
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TextField(
-                            controller: _amountController,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                            decoration: InputDecoration(
-                              prefixText: 'Rp ',
-                              prefixStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                              hintText: '0',
-                              filled: true,
-                              fillColor: const Color(0xFFF5F5F7),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
 
-                          // Quick Preset select chips
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: _presetAmounts.map((amt) {
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _amountController.text = amt.toInt().toString();
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: _amountController.text == amt.toInt().toString()
-                                          ? const Color(0xFF8C0E1A)
-                                          : const Color(0xFFE2E2E6),
-                                      width: 1.5,
-                                    ),
+                          // Pulsa: grid card 2 kolom
+                          if (_isPulsa) ...[
+                            _buildPulsaGrid(),
+                          ]
+
+                          // Top Up & Tagihan: input teks bebas + chip preset (Top Up saja)
+                          else ...[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Rp ',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    fontFamily: 'Calibri',
                                   ),
-                                  child: Text(
-                                    'Rp ${_formatRupiah(amt)}',
-                                    style: TextStyle(
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _amountController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    style: const TextStyle(
+                                      fontSize: 28,
                                       fontWeight: FontWeight.bold,
-                                      color: _amountController.text == amt.toInt().toString()
-                                          ? const Color(0xFF8C0E1A)
-                                          : Colors.black87,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      isDense: true,
+                                      border: InputBorder.none,
+                                      hintText: '0',
+                                      hintStyle: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black26,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
+                              ],
+                            ),
+                            const Divider(thickness: 1, color: Colors.black26),
+                          ],
+
                           const SizedBox(height: 24),
 
-                          // Source Account (Dari Rekening)
+                          // ── TRANSFER DARI ──────────────────────────────
                           const Text(
-                            'Bayar Menggunakan',
+                            'Transfer dari',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
+                              fontFamily: 'Calibri',
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -366,15 +469,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE2E2E6)),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFE2E2E6),
+                                width: 1.2,
+                              ),
                             ),
                             child: Row(
                               children: [
                                 SvgPicture.asset(
                                   'assets/icons/Savers.svg',
-                                  width: 32,
-                                  height: 32,
+                                  width: 34,
+                                  height: 34,
                                   errorBuilder: (_, __, ___) => const Icon(
                                     Icons.account_balance_wallet,
                                     color: Color(0xFF8C0E1A),
@@ -383,18 +489,47 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'OCTO Savers $_accountMasked',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _isLoadingProfile
-                                            ? 'Memuat Saldo...'
-                                            : 'Saldo: Rp ${_formatRupiah(_accountBalance)}',
-                                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                      const SizedBox(height: 4),
+                                      GestureDetector(
+                                        onTap: () => setState(
+                                          () => _balanceVisible =
+                                              !_balanceVisible,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              _balanceVisible
+                                                  ? Icons
+                                                        .visibility_off_outlined
+                                                  : Icons
+                                                        .remove_red_eye_outlined,
+                                              size: 15,
+                                              color: Colors.black54,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              _isLoadingProfile
+                                                  ? 'Memuat...'
+                                                  : (_balanceVisible
+                                                        ? 'IDR ${_formatRupiah(_accountBalance)}'
+                                                        : 'IDR •••'),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black54,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -402,30 +537,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
 
-                          // Notes
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F7),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              controller: _catatanController,
-                              decoration: const InputDecoration(
-                                hintText: 'Catatan (Opsional)',
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                border: InputBorder.none,
+                          // ── CATATAN (hanya Top Up) ─────────────────────
+                          if (_isTopUp) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F5F7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: TextField(
+                                controller: _catatanController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Catatan (Opsional)',
+                                  hintStyle: TextStyle(color: Colors.black45),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                  border: InputBorder.none,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
+
                           const SizedBox(height: 20),
                         ],
                       ),
                     ),
                   ),
 
-                  // SUBMIT BUTTON
+                  // ── BUTTON ─────────────────────────────────────────────
                   Padding(
                     padding: EdgeInsets.only(
                       left: 20,
@@ -435,59 +577,41 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     child: SizedBox(
                       width: double.infinity,
-                      height: 54,
+                      height: 56,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(27),
+                          borderRadius: BorderRadius.circular(30),
                           gradient: LinearGradient(
                             colors: _isButtonEnabled
-                                ? [const Color(0xFFCC0000), const Color(0xFF8C0E1A)]
-                                : [Colors.grey.shade400, Colors.grey.shade500],
+                                ? [
+                                    const Color(0xFFCC0000),
+                                    const Color(0xFF8C0E1A),
+                                  ]
+                                : [
+                                    Colors.grey.shade400,
+                                    Colors.grey.shade500,
+                                  ],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
                         ),
                         child: ElevatedButton(
-                          onPressed: _isButtonEnabled
-                              ? () {
-                                  final double amtVal = double.tryParse(_amountController.text) ?? 0.0;
-                                  if (amtVal > _accountBalance) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Saldo Anda tidak mencukupi untuk pembayaran ini.'),
-                                        backgroundColor: Color(0xFF8C0E1A),
-                                      ),
-                                    );
-                                    return;
-                                  }
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => KonfirmasiPinScreen(
-                                        recipientName: widget.merchantName,
-                                        recipientBank: widget.category,
-                                        recipientAccount: _numberController.text.trim(),
-                                        nominal: amtVal,
-                                        catatan: _catatanController.text,
-                                        transactionType: 'tagihan',
-                                        category: widget.category,
-                                        transactionMethod: widget.transactionMethod,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : null,
+                          onPressed: _isButtonEnabled ? _onSubmit : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             disabledBackgroundColor: Colors.transparent,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
                           ),
                           child: const Text(
-                            'Lanjut ke Konfirmasi',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            'Selanjutnya',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -499,6 +623,58 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Grid 2 kolom untuk pilihan nominal pulsa ──────────────────────────
+  Widget _buildPulsaGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 2.7,
+      ),
+      itemCount: _pulsaPresets.length,
+      itemBuilder: (context, index) {
+        final isSelected = _selectedPresetIndex == index;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedPresetIndex = index;
+              _amountController.text =
+                  _pulsaPresets[index].toInt().toString();
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFFFFF0F0)
+                  : const Color(0xFFF5F5F7),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFF8C0E1A)
+                    : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              _formatRupiah(_pulsaPresets[index]),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isSelected
+                    ? const Color(0xFF8C0E1A)
+                    : Colors.black87,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

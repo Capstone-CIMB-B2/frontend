@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'detail_transfer_screen.dart';
 import 'payment_screen.dart';
 import '../services/api_service.dart';
 
@@ -18,19 +17,13 @@ class _TagihanScreenState extends State<TagihanScreen> {
   String _searchQuery = '';
   String _favSearchQuery = '';
 
-  int _selectedCategoryTab =
-      0; // 0: Semua, 1: Tagihan, 2: Isi Ulang, 3: Lainnya
-  int _selectedFavTab = 0; // 0: Tersimpan, 1: Terakhir
+  int _selectedCategoryTab = 0;
+  int _selectedFavTab = 0;
 
   int _currentPageGrid = 0;
   final PageController _pageController = PageController();
 
-  // State Simulasi Favorit (Empty vs Filled)
-  bool _isFavoritesSimulatedEmpty = false;
-
-  // Data Kategori Fitur (menggunakan iconPath SVG)
   static final List<_ServiceItem> _allServices = [
-    // Page 1
     const _ServiceItem(
       label: 'eWallet',
       category: 'isi_ulang',
@@ -142,7 +135,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
       iconPath: 'assets/icons/tagihan/BPJS.svg',
       keywords: ['bpjs', 'kesehatan', 'ketenagakerjaan'],
     ),
-    // Page 2
     const _ServiceItem(
       label: 'Penerimaan Negara',
       category: 'tagihan',
@@ -192,7 +184,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
       label: 'Asuransi',
       category: 'lainnya',
       iconPath: 'assets/icons/tagihan/Asuransi.svg',
-      keywords: ['keuangan', 'pinjaman', 'kredit', 'cicilan', 'multi finance'],
+      keywords: ['asuransi', 'insurance'],
     ),
     const _ServiceItem(
       label: 'Visa/Paspor',
@@ -238,42 +230,79 @@ class _TagihanScreenState extends State<TagihanScreen> {
   @override
   void initState() {
     super.initState();
-
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim().toLowerCase();
-        _currentPageGrid = 0; // Reset page on search
+        _currentPageGrid = 0;
       });
     });
-
     _favSearchController.addListener(() {
-      setState(() {
-        _favSearchQuery = _favSearchController.text.trim().toLowerCase();
-      });
+      setState(
+        () => _favSearchQuery = _favSearchController.text.trim().toLowerCase(),
+      );
     });
-
     _fetchSavedFavorites();
     _fetchRecentFavorites();
   }
 
   String _getWalletLogo(String type) {
     switch (type.toLowerCase()) {
+      // E-Wallet
       case 'shopeepay':
         return 'assets/logo/Shopeepay.svg';
+
       case 'gopay':
-        return 'assets/gopay.svg';
+        return 'assets/logo/Gopay.svg';
+
       case 'ovo':
-        return 'assets/logo/OVO.svg';
+        return 'assets/logo/Ovo.png';
+
       case 'dana':
         return 'assets/logo/Dana.svg';
+
+      // Pulsa
+      case 'telkomsel':
+        return 'assets/logo/Telkomsel.svg';
+
+      case 'indosat':
+        return 'assets/logo/Indosat.svg';
+
+      case 'xl':
+        return 'assets/logo/Xl.svg';
+
+      // Tagihan
+      case 'pln':
+        return 'assets/logo/Pln.svg';
+
+      case 'biznet':
+        return 'assets/logo/Biznet.svg';
+
+      case 'indihome':
+        return 'assets/logo/IndiHome.svg';
+
+      case 'telkom':
+        return 'assets/logo/Telkom.png';
+
+      // Hiburan
+      case 'netflix':
+        return 'assets/logo/Netflix.svg';
+
+      case 'spotify':
+        return 'assets/logo/Spotify.svg';
+
+      case 'youtube':
+        return 'assets/logo/Youtube.png';
+
       default:
-        return 'assets/logo/Shopeepay.svg';
+        return 'assets/icons/Tagihan.svg'; // fallback
     }
   }
 
   Future<void> _fetchSavedFavorites() async {
     try {
-      final data = await ApiService.getSavedContacts(excludeCategory: 'Transfer');
+      final data = await ApiService.getSavedContacts(
+        excludeCategory: 'Transfer',
+      );
       if (data != null && mounted) {
         setState(() {
           _savedFavorites = data.map<Map<String, String>>((x) {
@@ -289,7 +318,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
         });
       }
     } catch (e) {
-      // silent
+      /* silent */
     }
   }
 
@@ -321,7 +350,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
         });
       }
     } catch (e) {
-      // silent
+      /* silent */
     }
   }
 
@@ -333,17 +362,16 @@ class _TagihanScreenState extends State<TagihanScreen> {
     super.dispose();
   }
 
-  // Filter Kategori berdasarkan Tab Aktif
   List<_ServiceItem> get _filteredServicesByCategory {
     switch (_selectedCategoryTab) {
-      case 1: // Tagihan
+      case 1:
         return _allServices
             .where(
               (s) =>
                   s.category == 'tagihan' || s.category == 'tagihan_isi_ulang',
             )
             .toList();
-      case 2: // Isi Ulang
+      case 2:
         return _allServices
             .where(
               (s) =>
@@ -351,47 +379,49 @@ class _TagihanScreenState extends State<TagihanScreen> {
                   s.category == 'tagihan_isi_ulang',
             )
             .toList();
-      case 3: // Lainnya
+      case 3:
         return _allServices.where((s) => s.category == 'lainnya').toList();
-      case 0: // Semua
       default:
         return _allServices;
     }
   }
 
-  // Filter Kategori berdasarkan Tab Aktif DAN Search Query
   List<_ServiceItem> get _finalFilteredServices {
     final categoryList = _filteredServicesByCategory;
     if (_searchQuery.isEmpty) return categoryList;
-    return categoryList.where((s) {
-      return s.label.toLowerCase().contains(_searchQuery) ||
-          s.keywords.any((k) => k.contains(_searchQuery));
-    }).toList();
+    return categoryList
+        .where(
+          (s) =>
+              s.label.toLowerCase().contains(_searchQuery) ||
+              s.keywords.any((k) => k.contains(_searchQuery)),
+        )
+        .toList();
   }
 
-  // Filter Kontak Favorit - Tersimpan
   List<Map<String, String>> get _filteredSavedFavorites {
-    if (_isFavoritesSimulatedEmpty) return [];
     if (_favSearchQuery.isEmpty) return _savedFavorites;
-    return _savedFavorites.where((c) {
-      return c['name']!.toLowerCase().contains(_favSearchQuery) ||
-          c['number']!.toLowerCase().contains(_favSearchQuery);
-    }).toList();
+    return _savedFavorites
+        .where(
+          (c) =>
+              c['name']!.toLowerCase().contains(_favSearchQuery) ||
+              c['number']!.toLowerCase().contains(_favSearchQuery),
+        )
+        .toList();
   }
 
-  // Filter Kontak Favorit - Terakhir
   List<Map<String, String>> get _filteredRecentFavorites {
-    if (_isFavoritesSimulatedEmpty) return [];
     if (_favSearchQuery.isEmpty) return _recentFavorites;
-    return _recentFavorites.where((c) {
-      return c['name']!.toLowerCase().contains(_favSearchQuery) ||
-          c['number']!.toLowerCase().contains(_favSearchQuery);
-    }).toList();
+    return _recentFavorites
+        .where(
+          (c) =>
+              c['name']!.toLowerCase().contains(_favSearchQuery) ||
+              c['number']!.toLowerCase().contains(_favSearchQuery),
+        )
+        .toList();
   }
 
-  // Helper untuk memecah list menjadi chunks per halaman
   List<List<_ServiceItem>> _chunkList(List<_ServiceItem> list, int chunkSize) {
-    List<List<_ServiceItem>> chunks = [];
+    final chunks = <List<_ServiceItem>>[];
     for (var i = 0; i < list.length; i += chunkSize) {
       chunks.add(
         list.sublist(
@@ -403,45 +433,57 @@ class _TagihanScreenState extends State<TagihanScreen> {
     return chunks;
   }
 
-  // Aksi Klik Layanan Kategori
   void _onServiceTap(String label) {
-    if (label == 'eWallet') {
-      _showEWalletBottomSheet();
-    } else if (label == 'Telepon/Ponsel') {
-      _showTeleponBottomSheet();
-    } else if (label == 'Listrik') {
-      _showListrikBottomSheet();
-    } else if (label == 'PAM/PDAM') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const PaymentScreen(
-            category: 'Utilities',
-            merchantName: 'PDAM',
-            transactionMethod: 'Bayar Tagihan',
+    switch (label) {
+      case 'eWallet':
+        _showEWalletBottomSheet();
+        break;
+      case 'Telepon/Ponsel':
+        _showTeleponBottomSheet();
+        break;
+      case 'Listrik':
+        _showListrikBottomSheet();
+        break;
+      case 'PAM/PDAM':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PaymentScreen(
+              category: 'Utilities',
+              merchantName: 'PDAM',
+              transactionMethod: 'Bayar Tagihan',
+            ),
           ),
-        ),
-      );
-    } else if (label == 'Internet/Kabel TV') {
-      _showInternetBottomSheet();
-    } else if (label == 'Streaming & Hiburan') {
-      _showStreamingBottomSheet();
+        );
+        break;
+      case 'Internet/Kabel TV':
+        _showInternetBottomSheet();
+        break;
+      case 'Streaming & Hiburan':
+        _showStreamingBottomSheet();
+        break;
     }
   }
 
-  // Bottom Sheet E-Wallet
+  // ── Bottom sheets ─────────────────────────────────────────────────────
   void _showEWalletBottomSheet() {
     _showCustomBottomSheet(
       title: 'Isi Ulang e-Wallet',
-      child: _EWalletBottomSheetContent(
-        onSelect: (wallet) {
+      child: _buildLogoOptionsSheet(
+        options: const [
+          {'name': 'ShopeePay', 'logo': 'assets/logo/Shopeepay.svg'},
+          {'name': 'Gopay', 'logo': 'assets/logo/Gopay.svg'},
+          {'name': 'OVO', 'logo': 'assets/logo/Ovo.png'},
+          {'name': 'Dana', 'logo': 'assets/logo/Dana.svg'},
+        ],
+        onSelect: (option) {
           Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => PaymentScreen(
                 category: 'E-Wallet',
-                merchantName: wallet['name']!,
+                merchantName: option,
                 transactionMethod: 'Top Up',
               ),
             ),
@@ -451,12 +493,15 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Bottom Sheet Telepon/Ponsel
   void _showTeleponBottomSheet() {
     _showCustomBottomSheet(
       title: 'Pilih Operator Seluler',
-      child: _buildSimpleOptionsSheet(
-        options: const ['Telkomsel', 'XL', 'Indosat'],
+      child: _buildLogoOptionsSheet(
+        options: const [
+          {'name': 'Telkomsel', 'logo': 'assets/logo/Telkomsel.svg'},
+          {'name': 'XL', 'logo': 'assets/logo/Xl.svg'},
+          {'name': 'Indosat', 'logo': 'assets/logo/Indosat.svg'},
+        ],
         onSelect: (option) {
           Navigator.pop(context);
           Navigator.push(
@@ -474,12 +519,14 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Bottom Sheet Listrik
   void _showListrikBottomSheet() {
     _showCustomBottomSheet(
       title: 'Layanan Listrik PLN',
-      child: _buildSimpleOptionsSheet(
-        options: const ['Tagihan Listrik PLN', 'Token Listrik PLN'],
+      child: _buildLogoOptionsSheet(
+        options: const [
+          {'name': 'Tagihan Listrik PLN', 'logo': 'assets/logo/Pln.svg'},
+          {'name': 'Token Listrik PLN', 'logo': 'assets/logo/Pln.svg'},
+        ],
         onSelect: (option) {
           Navigator.pop(context);
           Navigator.push(
@@ -497,12 +544,15 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Bottom Sheet Internet
   void _showInternetBottomSheet() {
     _showCustomBottomSheet(
       title: 'Pilih Provider Internet/Kabel TV',
-      child: _buildSimpleOptionsSheet(
-        options: const ['Indihome', 'Biznet', 'Telkom'],
+      child: _buildLogoOptionsSheet(
+        options: const [
+          {'name': 'Indihome', 'logo': 'assets/logo/Indihome.svg'},
+          {'name': 'Biznet', 'logo': 'assets/logo/Biznet.svg'},
+          {'name': 'Telkom', 'logo': 'assets/logo/Telkom.png'},
+        ],
         onSelect: (option) {
           Navigator.pop(context);
           Navigator.push(
@@ -520,12 +570,15 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Bottom Sheet Streaming & Hiburan
   void _showStreamingBottomSheet() {
     _showCustomBottomSheet(
       title: 'Pilih Layanan Hiburan',
-      child: _buildSimpleOptionsSheet(
-        options: const ['Netflix', 'Spotify', 'Youtube'],
+      child: _buildLogoOptionsSheet(
+        options: const [
+          {'name': 'Netflix', 'logo': 'assets/logo/Netflix.svg'},
+          {'name': 'Spotify', 'logo': 'assets/logo/Spotify.svg'},
+          {'name': 'Youtube', 'logo': 'assets/logo/Youtube.png'},
+        ],
         onSelect: (option) {
           Navigator.pop(context);
           Navigator.push(
@@ -543,7 +596,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Helper menampilkan bottom sheet konsisten
   void _showCustomBottomSheet({required String title, required Widget child}) {
     showModalBottomSheet(
       context: context,
@@ -555,66 +607,54 @@ class _TagihanScreenState extends State<TagihanScreen> {
           topRight: Radius.circular(24),
         ),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.70,
           ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.70,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Drag Indicator
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD9D9D9),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9D9D9),
+                  borderRadius: BorderRadius.circular(100),
                 ),
-
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  child: Center(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontFamily: 'Calibri',
-                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Center(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'Calibri',
                     ),
                   ),
                 ),
-
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: Color(0xFFEFEFEF),
-                ),
-
-                Flexible(child: child),
-              ],
-            ),
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFEFEFEF)),
+              Flexible(child: child),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // Builder opsi sederhana untuk bottom sheet
-  Widget _buildSimpleOptionsSheet({
-    required List<String> options,
+  Widget _buildLogoOptionsSheet({
+    required List<Map<String, String>> options,
     required Function(String) onSelect,
   }) {
     return ListView.separated(
@@ -624,10 +664,11 @@ class _TagihanScreenState extends State<TagihanScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final option = options[index];
+        final logo = option['logo'] ?? '';
         return GestureDetector(
-          onTap: () => onSelect(option),
+          onTap: () => onSelect(option['name']!),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -635,9 +676,33 @@ class _TagihanScreenState extends State<TagihanScreen> {
             ),
             child: Row(
               children: [
+                SizedBox(
+                  width: 44,
+                  height: 34,
+                  child: logo.endsWith('.svg')
+                      ? SvgPicture.asset(
+                          logo,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image_not_supported,
+                            size: 24,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : Image.asset(
+                          logo,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image_not_supported,
+                            size: 24,
+                            color: Colors.grey,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    option,
+                    option['name']!,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -655,6 +720,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final double statusBarHeight = MediaQuery.of(context).padding.top;
@@ -662,16 +728,16 @@ class _TagihanScreenState extends State<TagihanScreen> {
 
     final services = _finalFilteredServices;
     final isSearching = _searchQuery.isNotEmpty;
-
-    // Hitung halaman grid hanya jika tidak sedang mencari
-    final chunks = isSearching ? [] : _chunkList(services, 10);
+    final chunks = isSearching
+        ? <List<_ServiceItem>>[]
+        : _chunkList(services, 10);
     final pageCount = isSearching ? 0 : chunks.length;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Header merah khas (sama seperti transfer screen)
+          // ── Header ────────────────────────────────────────────────────
           Positioned(
             top: 0,
             left: 0,
@@ -680,10 +746,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
               width: double.infinity,
               height: headerHeight,
               child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(0),
-                  bottomRight: Radius.circular(0),
-                ),
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -742,14 +804,13 @@ class _TagihanScreenState extends State<TagihanScreen> {
             ),
           ),
 
-          // 2. Konten utama
+          // ── Konten utama ───────────────────────────────────────────────
           Positioned(
             top: headerHeight - 25,
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
@@ -766,32 +827,28 @@ class _TagihanScreenState extends State<TagihanScreen> {
                   physics: const ClampingScrollPhysics(),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 18.0,
-                      vertical: 24.0,
+                      horizontal: 18,
+                      vertical: 24,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Search Bar Utama
                         _buildSearchBar(
                           controller: _searchController,
                           hintText: 'Cari nomor VA atau perusahaan',
                         ),
                         const SizedBox(height: 20),
 
-                        // Kategori Tabs
                         _CategoryTabs(
                           selectedIndex: _selectedCategoryTab,
-                          onSelect: (i) {
-                            setState(() {
-                              _selectedCategoryTab = i;
-                              _currentPageGrid = 0;
-                            });
-                          },
+                          onSelect: (i) => setState(() {
+                            _selectedCategoryTab = i;
+                            _currentPageGrid = 0;
+                          }),
                         ),
                         const SizedBox(height: 24),
 
-                        // Kategori Grid (Swipeable / Filtered List)
+                        // Grid layanan
                         if (services.isEmpty)
                           Container(
                             height: 120,
@@ -806,27 +863,28 @@ class _TagihanScreenState extends State<TagihanScreen> {
                             ),
                           )
                         else if (isSearching)
-                          // Mode Pencarian: Tampilkan single grid dengan wrap
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final itemWidth = constraints.maxWidth / 5;
                               return Wrap(
                                 runSpacing: 16,
-                                children: services.map<Widget>((item) {
-                                  return SizedBox(
-                                    width: itemWidth,
-                                    child: _ServiceGridItem(
-                                      label: item.label,
-                                      iconPath: item.iconPath,
-                                      onTap: () => _onServiceTap(item.label),
-                                    ),
-                                  );
-                                }).toList(),
+                                children: services
+                                    .map<Widget>(
+                                      (item) => SizedBox(
+                                        width: itemWidth,
+                                        child: _ServiceGridItem(
+                                          label: item.label,
+                                          iconPath: item.iconPath,
+                                          onTap: () =>
+                                              _onServiceTap(item.label),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
                               );
                             },
                           )
                         else
-                          // Mode Biasa: Tampilkan swipeable PageView
                           Column(
                             children: [
                               SizedBox(
@@ -844,19 +902,20 @@ class _TagihanScreenState extends State<TagihanScreen> {
                                             constraints.maxWidth / 5;
                                         return Wrap(
                                           runSpacing: 16,
-                                          children: pageItems.map<Widget>((
-                                            item,
-                                          ) {
-                                            return SizedBox(
-                                              width: itemWidth,
-                                              child: _ServiceGridItem(
-                                                label: item.label,
-                                                iconPath: item.iconPath,
-                                                onTap: () =>
-                                                    _onServiceTap(item.label),
-                                              ),
-                                            );
-                                          }).toList(),
+                                          children: pageItems
+                                              .map<Widget>(
+                                                (item) => SizedBox(
+                                                  width: itemWidth,
+                                                  child: _ServiceGridItem(
+                                                    label: item.label,
+                                                    iconPath: item.iconPath,
+                                                    onTap: () => _onServiceTap(
+                                                      item.label,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
                                         );
                                       },
                                     );
@@ -864,7 +923,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // Page Indicator
                               _GridPageIndicator(
                                 pageCount: pageCount,
                                 currentPage: _currentPageGrid,
@@ -872,70 +930,9 @@ class _TagihanScreenState extends State<TagihanScreen> {
                             ],
                           ),
 
-                        const SizedBox(height: 25),
-
-                        // Section Favorit
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Favorit Anda',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                                fontFamily: 'Calibri',
-                              ),
-                            ),
-                            // Button Simulasi untuk demonstrasi
-                            TextButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _isFavoritesSimulatedEmpty =
-                                      !_isFavoritesSimulatedEmpty;
-                                });
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: const Size(60, 30),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              icon: Icon(
-                                _isFavoritesSimulatedEmpty
-                                    ? Icons.star_border
-                                    : Icons.star,
-                                size: 14,
-                                color: const Color(0xFF8C0E1A),
-                              ),
-                              label: Text(
-                                _isFavoritesSimulatedEmpty
-                                    ? 'Isi Data'
-                                    : 'Kosongkan',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF8C0E1A),
-                                  fontFamily: 'Calibri',
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 15),
-
-                        // Search Bar Favorit
-                        _buildSearchBar(
-                          controller: _favSearchController,
-                          hintText: 'Cari Layanan Favorit',
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Tab Segmented control
-                        _buildSegmentedControl(),
-                        const SizedBox(height: 20),
-
-                        // List Favorit (Empty State vs Filled State)
-                        _buildFavoritesContent(),
+                        const SizedBox(height: 28),
+                        // ── FAVORIT ANDA ──────────────────────────────────
+                        _buildFavoritSection(),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -949,7 +946,40 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Builder Search Bar (bisa digunakan berulang)
+  // ── FAVORIT SECTION ───────────────────────────────────────────────────
+  Widget _buildFavoritSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header judul
+        const Text(
+          'Favorit Anda',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            fontFamily: 'Calibri',
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Search favorit
+        _buildSearchBar(
+          controller: _favSearchController,
+          hintText: 'Cari Layanan Favorit',
+        ),
+        const SizedBox(height: 16),
+
+        // Tab Tersimpan / Terakhir
+        _buildSegmentedControl(),
+        const SizedBox(height: 20),
+
+        // Konten tab
+        _buildFavoritesContent(),
+      ],
+    );
+  }
+
   Widget _buildSearchBar({
     required TextEditingController controller,
     required String hintText,
@@ -997,7 +1027,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Builder Segmented Tab Control (Tersimpan vs Terakhir)
   Widget _buildSegmentedControl() {
     return Container(
       height: 46,
@@ -1033,8 +1062,13 @@ class _TagihanScreenState extends State<TagihanScreen> {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF8C0E1A) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
+            gradient: isActive
+                ? const LinearGradient(
+                    colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                  )
+                : null,
+            color: isActive ? null : const Color(0xFFF3F3F3),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1051,67 +1085,19 @@ class _TagihanScreenState extends State<TagihanScreen> {
     );
   }
 
-  // Builder Konten Utama Favorit
   Widget _buildFavoritesContent() {
-    final savedList = _filteredSavedFavorites;
-    final recentList = _filteredRecentFavorites;
-    final activeList = _selectedFavTab == 0 ? savedList : recentList;
+    final activeList = _selectedFavTab == 0
+        ? _filteredSavedFavorites
+        : _filteredRecentFavorites;
 
     if (activeList.isEmpty) {
-      // 3.1. Empty State
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF0F0F2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Image.asset('assets/octo/octo-profile.png', width: 80, height: 80),
-            const SizedBox(height: 16),
-            const Text(
-              'Belum ada favorit tersimpan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                fontFamily: 'Calibri',
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'Tambahkan layanan atau transaksi yang sering digunakan untuk akses yang lebih praktis.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                  fontFamily: 'Calibri',
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState(isTabSaved: _selectedFavTab == 0);
     }
 
-    // 3.2. Filled State
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header jumlah & Kelola
+        // Header count + Kelola (hanya tab Tersimpan)
         if (_selectedFavTab == 0) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1126,14 +1112,12 @@ class _TagihanScreenState extends State<TagihanScreen> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Fitur Kelola Penerima (Placeholder)'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Fitur Kelola Penerima (Placeholder)'),
+                    duration: Duration(seconds: 2),
+                  ),
+                ),
                 child: const Text(
                   'Kelola',
                   style: TextStyle(
@@ -1149,145 +1133,220 @@ class _TagihanScreenState extends State<TagihanScreen> {
           const SizedBox(height: 14),
         ],
 
-        // List item
+        // List kartu
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.zero,
           itemCount: activeList.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final item = activeList[index];
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E2E6), width: 1.2),
-              ),
-              child: Row(
-                children: [
-                  // Logo/Placeholder e-wallet
-                  _buildSavedLogo(item['logo'], item['type'] ?? ''),
-                  const SizedBox(width: 14),
-                  // Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['name'] ?? '',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            fontFamily: 'Calibri',
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item['number'] ?? '',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                            fontFamily: 'Calibri',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Aksi tambahan untuk "Terakhir": add to favorites
-                  if (_selectedFavTab == 1)
-                    IconButton(
-                      icon: const Icon(
-                        Icons.person_add_alt_1_outlined,
-                        color: Color(0xFF8C0E1A),
-                      ),
-                      onPressed: () async {
-                        final res = await ApiService.addSavedContact(
-                          name: item['name']!,
-                          accountNumber: item['number']!,
-                          bankName: item['type']!,
-                          category: 'TopUp',
-                        );
-                        if (res != null && res['success'] == true) {
-                          _fetchSavedFavorites();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${item['name']} disimpan ke favorit!',
-                              ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                res?['message'] ?? 'Gagal menyimpan kontak',
-                              ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                ],
-              ),
-            );
-          },
+          itemBuilder: (context, index) => _buildFavoritCard(activeList[index]),
         ),
       ],
     );
   }
 
-  // Builder Logo Favorit
-  Widget _buildSavedLogo(String? logoPath, String type) {
-    if (logoPath != null && logoPath.isNotEmpty) {
-      if (logoPath.endsWith('.svg')) {
-        return SvgPicture.asset(
-          logoPath,
-          width: 40,
-          height: 40,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Color(0xFF8C0E1A),
-            size: 32,
+  // ── Empty state ────────────────────────────────────────────────────────
+  Widget _buildEmptyState({required bool isTabSaved}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF0F0F2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-        );
-      } else {
-        return Image.asset(
-          logoPath,
-          width: 40,
-          height: 40,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Color(0xFF8C0E1A),
-            size: 32,
+        ],
+      ),
+      child: Column(
+        children: [
+          Image.asset('assets/octo/octo-profile.png', width: 90, height: 90),
+          const SizedBox(height: 16),
+          Text(
+            isTabSaved
+                ? 'Belum ada favorit tersimpan'
+                : 'Belum ada transaksi terakhir',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontFamily: 'Calibri',
+            ),
+            textAlign: TextAlign.center,
           ),
-        );
-      }
+          const SizedBox(height: 8),
+          Text(
+            isTabSaved
+                ? 'Tambahkan layanan atau transaksi yang sering digunakan untuk akses yang lebih praktis.'
+                : 'Riwayat transaksi yang Anda lakukan akan ditampilkan di sini untuk memudahkan akses transaksi berikutnya.',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+              fontFamily: 'Calibri',
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Kartu favorit / terakhir ───────────────────────────────────────────
+  Widget _buildFavoritCard(Map<String, String> item) {
+    final isRecent = _selectedFavTab == 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Logo dalam lingkaran
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF5F5F5),
+              shape: BoxShape.circle,
+            ),
+            child: ClipOval(child: _buildLogoWidget(item['logo'])),
+          ),
+          const SizedBox(width: 14),
+
+          // Nama + nomor
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['name'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'Calibri',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  item['number'] ?? '',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontFamily: 'Calibri',
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Ikon aksi
+          if (isRecent)
+            GestureDetector(
+              onTap: () async {
+                final res = await ApiService.addSavedContact(
+                  name: item['name']!,
+                  accountNumber: item['number']!,
+                  bankName: item['type']!,
+                  category: 'TopUp',
+                );
+                if (!mounted) return;
+                if (res != null && res['success'] == true) {
+                  _fetchSavedFavorites();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${item['name']} disimpan ke favorit!'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        res?['message'] ?? 'Gagal menyimpan kontak',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.person_add_alt_1_outlined,
+                  color: Color(0xFF8C0E1A),
+                  size: 22,
+                ),
+              ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.only(left: 8),
+              child: Icon(Icons.chevron_right, color: Colors.grey, size: 22),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoWidget(String? logoPath) {
+    if (logoPath == null || logoPath.isEmpty) {
+      return const Icon(
+        Icons.account_balance_wallet_outlined,
+        color: Color(0xFF8C0E1A),
+        size: 28,
+      );
     }
-    return const Icon(
-      Icons.account_balance_wallet_outlined,
-      color: Color(0xFF8C0E1A),
-      size: 32,
+    if (logoPath.endsWith('.svg')) {
+      return SvgPicture.asset(
+        logoPath,
+        width: 48,
+        height: 48,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.account_balance_wallet_outlined,
+          color: Color(0xFF8C0E1A),
+          size: 28,
+        ),
+      );
+    }
+    return Image.asset(
+      logoPath,
+      width: 48,
+      height: 48,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(
+        Icons.account_balance_wallet_outlined,
+        color: Color(0xFF8C0E1A),
+        size: 28,
+      ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// CUSTOM SUB-WIDGETS
-// ─────────────────────────────────────────────
+// ── Sub-widgets ───────────────────────────────────────────────────────────
 
-// Item Grid Kategori Layanan
 class _ServiceGridItem extends StatelessWidget {
   final String label;
   final String iconPath;
   final VoidCallback onTap;
-
   const _ServiceGridItem({
     required this.label,
     required this.iconPath,
@@ -1302,10 +1361,9 @@ class _ServiceGridItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          SizedBox(
             width: 48,
             height: 48,
-            alignment: Alignment.center,
             child: SvgPicture.asset(iconPath, width: 43, height: 43),
           ),
           const SizedBox(height: 8),
@@ -1330,12 +1388,10 @@ class _ServiceGridItem extends StatelessWidget {
   }
 }
 
-// Kategori Filter Tab Bar
 class _CategoryTabs extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelect;
   final List<String> tabs = const ['Semua', 'Tagihan', 'Isi Ulang', 'Lainnya'];
-
   const _CategoryTabs({required this.selectedIndex, required this.onSelect});
 
   @override
@@ -1376,11 +1432,9 @@ class _CategoryTabs extends StatelessWidget {
   }
 }
 
-// Page Indicator
 class _GridPageIndicator extends StatelessWidget {
   final int pageCount;
   final int currentPage;
-
   const _GridPageIndicator({
     required this.pageCount,
     required this.currentPage,
@@ -1389,242 +1443,28 @@ class _GridPageIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (pageCount <= 1) return const SizedBox.shrink();
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(2),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: List.generate(pageCount, (index) {
-          final isActive = index == currentPage;
-
-          return Container(
+        children: List.generate(
+          pageCount,
+          (index) => Container(
             width: 32,
             height: 4,
-            color: isActive ? const Color(0xFF8C0E1A) : const Color(0xFFE2E2E6),
-          );
-        }),
+            color: index == currentPage
+                ? const Color(0xFF8C0E1A)
+                : const Color(0xFFE2E2E6),
+          ),
+        ),
       ),
     );
   }
 }
 
-// Konten Bottom Sheet E-Wallet
-class _EWalletBottomSheetContent extends StatefulWidget {
-  final Function(Map<String, String>) onSelect;
-  const _EWalletBottomSheetContent({required this.onSelect});
-
-  @override
-  State<_EWalletBottomSheetContent> createState() =>
-      _EWalletBottomSheetContentState();
-}
-
-class _EWalletBottomSheetContentState
-    extends State<_EWalletBottomSheetContent> {
-  final TextEditingController _walletSearchController = TextEditingController();
-  String _query = '';
-
-  final List<Map<String, String>> _wallets = [
-    {'name': 'ShopeePay', 'logo': 'assets/logo/Shopeepay.svg'},
-    {'name': 'Gopay', 'logo': 'assets/gopay.svg'},
-    {'name': 'Ovo', 'logo': 'assets/logo/OVO.svg'},
-    {'name': 'Dana', 'logo': 'assets/logo/Dana.svg'},
-    // {'name': 'Flazz BCA', 'logo': 'assets/logo/FlazzBCA.svg'},
-    // {'name': 'BNI TapCash', 'logo': 'assets/logo/TapCash.svg'},
-    // {'name': 'Doku Wallet', 'logo': 'assets/logo/DOKU.svg'},
-    // {'name': 'iPaymu', 'logo': 'assets/Logo/IPaymu.png'},
-    // {'name': 'AstraPay', 'logo': 'assets/logo/AstraPay.png'},
-    // {'name': 'LinkAja', 'logo': 'assets/logo/LinkAja.svg'},
-    // {'name': 'OTTOCASH', 'logo': 'assets/logo/OTTOCASH.png'},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _walletSearchController.addListener(() {
-      setState(() {
-        _query = _walletSearchController.text.trim().toLowerCase();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _walletSearchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _wallets
-        .where((w) => w['name']!.toLowerCase().contains(_query))
-        .toList();
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Search Bar E-Wallet
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.grey[300]!, width: 1.2),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(Icons.search, color: Colors.grey[400], size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _walletSearchController,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.black,
-                      fontFamily: 'Calibri',
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Cari nama produk',
-                      hintStyle: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 15,
-                        fontFamily: 'Calibri',
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-                if (_walletSearchController.text.isNotEmpty)
-                  GestureDetector(
-                    onTap: _walletSearchController.clear,
-                    child: Icon(Icons.close, color: Colors.grey[400], size: 20),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const Divider(height: 1, thickness: 1, color: Color(0xFFEFEFEF)),
-        // List e-wallet
-        Expanded(
-          child: filtered.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'Produk tidak ditemukan',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 15,
-                        fontFamily: 'Calibri',
-                      ),
-                    ),
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final wallet = filtered[index];
-                    return GestureDetector(
-                      onTap: () {
-                        widget.onSelect(wallet);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFE2E2E6),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildWalletLogo(wallet['logo'], wallet['name']!),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                wallet['name']!,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                  fontFamily: 'Calibri',
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right,
-                              color: Colors.grey[400],
-                              size: 24,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  // Builder Logo E-Wallet
-  Widget _buildWalletLogo(String? logoPath, String name) {
-    Widget logoWidget;
-
-    if (logoPath != null && logoPath.isNotEmpty) {
-      if (logoPath.endsWith('.svg')) {
-        logoWidget = SvgPicture.asset(
-          logoPath,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Color(0xFFCC0000),
-            size: 24,
-          ),
-        );
-      } else {
-        logoWidget = Image.asset(
-          logoPath,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Color(0xFFCC0000),
-            size: 24,
-          ),
-        );
-      }
-    } else {
-      logoWidget = const Icon(
-        Icons.account_balance_wallet_outlined,
-        color: Color(0xFFCC0000),
-        size: 24,
-      );
-    }
-
-    return SizedBox(width: 39, height: 32, child: Center(child: logoWidget));
-  }
-}
-
 class _ServiceItem {
-  final String label;
-  final String category;
-  final String iconPath;
+  final String label, category, iconPath;
   final List<String> keywords;
-
   const _ServiceItem({
     required this.label,
     required this.category,
