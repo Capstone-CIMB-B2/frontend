@@ -1,10 +1,9 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'dart:math';
 import '../services/api_service.dart';
-import 'konfirmasi_pin_screen.dart';
+import 'qris_payment_screen.dart';
 
 class QrisScreen extends StatefulWidget {
   const QrisScreen({super.key});
@@ -20,23 +19,6 @@ class _QrisScreenState extends State<QrisScreen>
 
   final MobileScannerController _cameraController = MobileScannerController();
   bool _hasScanned = false;
-
-  // 0: Scan Camera View, 1: Amount Payment View
-  int _currentStep = 0;
-
-  // Decoded Merchant Data
-  String _merchantId = '';
-  String _merchantName = '';
-  String _category = '';
-  String _transactionMethod = '';
-
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-
-  double _accountBalance = 0.0;
-  String _accountNumber = '';
-  bool _isLoadingProfile = true;
-  bool _isPayEnabled = false;
 
   // Simulated QR payload strings for gallery fallback
   final List<Map<String, String>> _mockQrCodes = [
@@ -82,7 +64,6 @@ class _QrisScreenState extends State<QrisScreen>
   @override
   void initState() {
     super.initState();
-    _loadProfile();
 
     _animationController = AnimationController(
       vsync: this,
@@ -93,39 +74,13 @@ class _QrisScreenState extends State<QrisScreen>
       begin: 0.0,
       end: 1.0,
     ).animate(_animationController);
-
-    _amountController.addListener(() {
-      final text = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
-      final double val = double.tryParse(text) ?? 0.0;
-      setState(() => _isPayEnabled = val > 0);
-    });
   }
 
-  Future<void> _loadProfile() async {
-    final profile = await ApiService.getProfile();
-    if (profile != null && mounted) {
-      setState(() {
-        _accountNumber = profile['account_number'] ?? '';
-        _accountBalance = (profile['account_balance'] ?? 0.0).toDouble();
-        _isLoadingProfile = false;
-      });
-    } else {
-      setState(() => _isLoadingProfile = false);
-    }
-  }
-
-  String get _accountMasked {
-    if (_accountNumber.length >= 4) {
-      return '(••••${_accountNumber.substring(_accountNumber.length - 4)})';
-    }
-    return '(••••)';
-  }
-
-  String _formatRupiah(double amount) {
-    int val = amount.toInt();
-    String str = val.toString();
-    RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    return str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _cameraController.dispose();
+    super.dispose();
   }
 
   Future<void> _decodeQrCode(String payload) async {
@@ -139,7 +94,7 @@ class _QrisScreenState extends State<QrisScreen>
       builder: (_) => const Dialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(20)),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 30, horizontal: 20),
@@ -165,31 +120,41 @@ class _QrisScreenState extends State<QrisScreen>
     final result = await ApiService.decodeQr(payload);
 
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.pop(context); // tutup dialog loading
 
     if (result != null) {
-      setState(() {
-        _merchantId = result['merchant_id'] ?? 'MRC_UNKNOWN';
-        _merchantName = result['merchant_name'] ?? 'Unknown Merchant';
-        _category = result['category'] ?? 'General';
-        _transactionMethod = result['transaction_method'] ?? 'QRIS';
-        _currentStep = 1;
-      });
+      // Navigate ke payment screen, bawa data merchant
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => QrisPaymentScreen(
+            merchantId: result['merchant_id'] ?? 'MRC_UNKNOWN',
+            merchantName: result['merchant_name'] ?? 'Unknown Merchant',
+            category: result['category'] ?? 'General',
+            transactionMethod: result['transaction_method'] ?? 'QRIS',
+          ),
+        ),
+      );
+
+      // Setelah kembali dari payment screen, reset state scan
+      setState(() => _hasScanned = false);
+      _cameraController.start();
     } else {
       _hasScanned = false;
       _cameraController.start();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kode QRIS tidak valid atau gagal dibaca oleh server!'),
-          backgroundColor: Color(0xFF8C0E1A),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kode QRIS tidak valid atau gagal dibaca oleh server!'),
+            backgroundColor: Color(0xFF8C0E1A),
+          ),
+        );
+      }
     }
   }
 
   void _showGalleryPicker() {
     _cameraController.stop();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -208,7 +173,7 @@ class _QrisScreenState extends State<QrisScreen>
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Center(
                 child: Container(
@@ -222,17 +187,12 @@ class _QrisScreenState extends State<QrisScreen>
               ),
               const SizedBox(height: 20),
               const Text(
-                'Galeri Foto - Pilih Gambar QRIS',
+                'Galeri Foto',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Pilih salah satu Kode QR di bawah untuk disimulasikan pemindaiannya.',
-                style: TextStyle(color: Colors.grey[600], fontSize: 13),
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -269,25 +229,6 @@ class _QrisScreenState extends State<QrisScreen>
                               size: const Size(90, 90),
                               painter: QrCodePainter(item['payload']!),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              item['name']!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item['category']!,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[600],
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -300,49 +241,13 @@ class _QrisScreenState extends State<QrisScreen>
         );
       },
     ).then((_) {
-      if (_currentStep == 0 && !_hasScanned) _cameraController.start();
+      // Kalau sheet ditutup tanpa scan, nyalakan kamera lagi
+      if (!_hasScanned) _cameraController.start();
     });
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    _cameraController.dispose();
-    _amountController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_currentStep == 1) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: const Text(
-            'Detail Pembayaran QRIS',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.black),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              setState(() {
-                _currentStep = 0;
-                _hasScanned = false;
-                _amountController.clear();
-                _notesController.clear();
-              });
-              _cameraController.start();
-            },
-          ),
-        ),
-        body: _buildAmountView(),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -368,7 +273,7 @@ class _QrisScreenState extends State<QrisScreen>
 
           // ── 4. TOP HEADER ─────────────────────────────────────────────
           Positioned(
-            top: 0,
+            top: 20,
             left: 0,
             right: 0,
             child: SafeArea(
@@ -404,23 +309,7 @@ class _QrisScreenState extends State<QrisScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    // Flash toggle
-                    GestureDetector(
-                      onTap: () => _cameraController.toggleTorch(),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.flash_on_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(width: 40),
                   ],
                 ),
               ),
@@ -438,179 +327,198 @@ class _QrisScreenState extends State<QrisScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Gallery button — floats above the red bar
+                // Flash + Gallery icons
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: GestureDetector(
-                    onTap: _showGalleryPicker,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.25),
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _cameraController.toggleTorch(),
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.flash_on_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
+                      const SizedBox(width: 260),
+                      GestureDetector(
+                        onTap: _showGalleryPicker,
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          child: const Icon(
                             Icons.photo_library_outlined,
                             color: Colors.white,
-                            size: 20,
+                            size: 24,
                           ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Pindai QR dari Galeri',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Stack: red bar + white panel overlapping
+                Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(
+                        left: 25,
+                        right: 25,
+                        top: 20,
+                        bottom: 40,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE5232B),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(30),
+                          topRight: Radius.circular(30),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Gunakan QRIS di berbagai negara berikut',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          Icon(
+                            Icons.chevron_right,
+                            color: Colors.white.withOpacity(0.8),
+                            size: 20,
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-
-                // Red bar
-                Container(
-                  width: double.infinity,
-                  height: 54,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE5232B),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Gunakan QRIS di berbagai negara berikut',
-                        style: TextStyle(
+                    Padding(
+                      padding: const EdgeInsets.only(top: 56),
+                      child: Container(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                          ),
+                        ),
+                        padding: EdgeInsets.only(
+                          left: 25,
+                          right: 25,
+                          top: 20,
+                          bottom: MediaQuery.of(context).padding.bottom + 50,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Text(
+                                'Atau, buat kode QR dengan memilih salah satu opsi berikut.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 95,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.grey[200]!,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        SvgPicture.asset(
+                                          'assets/icons/QRIS/QRISTap.svg',
+                                          width: 55,
+                                          height: 37,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        const Text(
+                                          'QRIS Tap',
+                                          style: TextStyle(
+                                            color: Colors.black87,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Container(
+                                    height: 95,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.grey[200]!,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        SvgPicture.asset(
+                                          'assets/icons/QRIS/QRBayar.svg',
+                                          width: 40,
+                                          height: 40,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        const Text(
+                                          'QR Bayar',
+                                          style: TextStyle(
+                                            color: Colors.black87,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.white.withOpacity(0.8),
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // White bottom panel
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
                     ),
-                  ),
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 20,
-                    bottom: MediaQuery.of(context).padding.bottom + 20,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Text(
-                          'Atau, buat kode QR dengan memilih salah satu opsi berikut.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Row(
-                        children: [
-                          // QRIS Tap card
-                          Expanded(
-                            child: Container(
-                              height: 90,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey[200]!,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset(
-                                    'assets/icons/QRIS/QRISTap.svg',
-                                    height: 40,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'QRIS Tap',
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-
-                          // QR Bayar card
-                          Expanded(
-                            child: Container(
-                              height: 90,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey[200]!,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset(
-                                    'assets/icons/QRIS/QRBayar.svg',
-                                    height: 40,
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'QR Bayar',
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -620,7 +528,6 @@ class _QrisScreenState extends State<QrisScreen>
     );
   }
 
-  // ── Scan frame corners + instructional text ──────────────────────────
   Widget _buildScanFrameArea(BuildContext context) {
     const double frameSize = 260.0;
     const double cornerLen = 28.0;
@@ -629,7 +536,7 @@ class _QrisScreenState extends State<QrisScreen>
 
     return Positioned.fill(
       child: Align(
-        alignment: const Alignment(0, -0.15), // slightly above center
+        alignment: const Alignment(0, -0.4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -638,7 +545,6 @@ class _QrisScreenState extends State<QrisScreen>
               height: frameSize,
               child: Stack(
                 children: [
-                  // Top-left
                   Positioned(
                     top: 0,
                     left: 0,
@@ -650,7 +556,6 @@ class _QrisScreenState extends State<QrisScreen>
                       left: true,
                     ),
                   ),
-                  // Top-right
                   Positioned(
                     top: 0,
                     right: 0,
@@ -662,7 +567,6 @@ class _QrisScreenState extends State<QrisScreen>
                       left: false,
                     ),
                   ),
-                  // Bottom-left
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -674,7 +578,6 @@ class _QrisScreenState extends State<QrisScreen>
                       left: true,
                     ),
                   ),
-                  // Bottom-right
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -704,7 +607,6 @@ class _QrisScreenState extends State<QrisScreen>
     );
   }
 
-  // ── Animated red laser scan line inside the frame ────────────────────
   Widget _buildScanLine() {
     const double frameSize = 260.0;
     return Positioned.fill(
@@ -742,267 +644,6 @@ class _QrisScreenState extends State<QrisScreen>
           ),
         ),
       ),
-    );
-  }
-
-  // ── Amount input screen ──────────────────────────────────────────────
-  Widget _buildAmountView() {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Merchant card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3F3),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFF5E1E1)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.qr_code_2_rounded,
-                          color: Color(0xFF8C0E1A),
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _merchantName.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Metode: QRIS • $_category',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                const Text(
-                  'Nominal Belanja',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Text(
-                      'Rp ',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _amountController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: '0',
-                          hintStyle: TextStyle(
-                            fontSize: 28,
-                            color: Colors.black26,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(thickness: 1, color: Colors.black26),
-                const SizedBox(height: 24),
-
-                const Text(
-                  'Bayar Menggunakan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E2E6)),
-                  ),
-                  child: Row(
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/Savers.svg',
-                        width: 32,
-                        height: 32,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.account_balance_wallet,
-                          color: Color(0xFF8C0E1A),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'OCTO Savers $_accountMasked',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _isLoadingProfile
-                                  ? 'Memuat Saldo...'
-                                  : 'Saldo: Rp ${_formatRupiah(_accountBalance)}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    controller: _notesController,
-                    decoration: const InputDecoration(
-                      hintText: 'Catatan (Opsional)',
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(context).padding.bottom + 20,
-            top: 10,
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(27),
-                gradient: LinearGradient(
-                  colors: _isPayEnabled
-                      ? [const Color(0xFFCC0000), const Color(0xFF8C0E1A)]
-                      : [Colors.grey.shade400, Colors.grey.shade500],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: ElevatedButton(
-                onPressed: _isPayEnabled
-                    ? () {
-                        final double amtVal =
-                            double.tryParse(_amountController.text) ?? 0.0;
-                        if (amtVal > _accountBalance) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Saldo Anda tidak mencukupi.'),
-                              backgroundColor: Color(0xFF8C0E1A),
-                            ),
-                          );
-                          return;
-                        }
-                        final randId =
-                            'QRIS-${100000 + Random().nextInt(900000)}';
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => KonfirmasiPinScreen(
-                              recipientName: _merchantName,
-                              recipientBank: _category,
-                              recipientAccount: randId,
-                              nominal: amtVal,
-                              catatan: _notesController.text,
-                              transactionType: 'qris',
-                              category: _category,
-                              transactionMethod: 'QRIS',
-                            ),
-                          ),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  disabledBackgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(27),
-                  ),
-                ),
-                child: const Text(
-                  'Konfirmasi Pembayaran',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1064,13 +705,11 @@ class _CornerPainter extends CustomPainter {
     final double w = size.width;
     final double h = size.height;
 
-    // Horizontal line
     final double hStartX = left ? 0 : w;
     final double hEndX = left ? w : 0;
     final double hY = top ? 0 : h;
     canvas.drawLine(Offset(hStartX, hY), Offset(hEndX, hY), paint);
 
-    // Vertical line
     final double vX = left ? 0 : w;
     final double vStartY = top ? 0 : h;
     final double vEndY = top ? h : 0;
@@ -1089,7 +728,6 @@ class _ScanOverlayPainter extends CustomPainter {
     const double frameRadius = 12.0;
 
     final cx = size.width / 2;
-    // Same vertical alignment as Alignment(0, -0.15)
     final cy = size.height / 2 + (size.height * -0.15 / 2);
 
     final frameRect = Rect.fromCenter(

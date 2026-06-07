@@ -1,50 +1,45 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
-import 'ringkasan_transfer_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/api_service.dart';
+import 'konfirmasi_pin_screen.dart';
 
-class DetailTransferScreen extends StatefulWidget {
-  final String recipientName;
-  final String recipientBank;
-  final String recipientAccount;
+class QrisPaymentScreen extends StatefulWidget {
+  final String merchantId;
+  final String merchantName;
+  final String category;
+  final String transactionMethod;
 
-  const DetailTransferScreen({
+  const QrisPaymentScreen({
     super.key,
-    required this.recipientName,
-    required this.recipientBank,
-    required this.recipientAccount,
+    required this.merchantId,
+    required this.merchantName,
+    required this.category,
+    required this.transactionMethod,
   });
 
   @override
-  State<DetailTransferScreen> createState() => _DetailTransferScreenState();
+  State<QrisPaymentScreen> createState() => _QrisPaymentScreenState();
 }
 
-class _DetailTransferScreenState extends State<DetailTransferScreen> {
-  final TextEditingController _nominalController = TextEditingController();
-  final TextEditingController _catatanController = TextEditingController();
+class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
+  final TextEditingController _amountController = TextEditingController();
 
-  bool _isButtonEnabled = false;
-  String _accountNumber = '••••1854';
   double _accountBalance = 0.0;
-  bool _balanceVisible = false;
+  String _accountNumber = '';
   bool _isLoadingProfile = true;
+  bool _isPayEnabled = false;
+  bool _balanceVisible = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
-
-    _nominalController.addListener(() {
-      setState(() {
-        _isButtonEnabled =
-            _nominalController.text.trim().isNotEmpty &&
-            (double.tryParse(
-                      _nominalController.text.replaceAll(RegExp(r'[^0-9]'), ''),
-                    ) ??
-                    0) >
-                0;
-      });
+    _amountController.addListener(() {
+      final text = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final double val = double.tryParse(text) ?? 0.0;
+      setState(() => _isPayEnabled = val > 0);
     });
   }
 
@@ -57,9 +52,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
         _isLoadingProfile = false;
       });
     } else {
-      setState(() {
-        _isLoadingProfile = false;
-      });
+      setState(() => _isLoadingProfile = false);
     }
   }
 
@@ -74,25 +67,23 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
     int val = amount.toInt();
     String str = val.toString();
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    String result = str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
-    return result;
-  }
-
-  @override
-  void dispose() {
-    _nominalController.dispose();
-    _catatanController.dispose();
-    super.dispose();
+    return str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
   }
 
   String _getInitials(String name) {
     final clean = name.trim();
-    if (clean.isEmpty) return 'SA';
+    if (clean.isEmpty) return '??';
     final parts = clean.split(RegExp(r'\s+'));
     if (parts.length > 1) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return parts[0][0].toUpperCase();
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
   }
 
   @override
@@ -104,19 +95,19 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // HEADER
+          // ── HEADER ────────────────────────────────────────────────────
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: _SimpleHeader(
-              title: 'Detail Transfer',
+              title: 'Pembayaran',
               height: headerHeight,
               onBack: () => Navigator.pop(context),
             ),
           ),
 
-          // CONTENT
+          // ── CONTENT (overlap header dengan rounded corner) ────────────
           Positioned(
             top: headerHeight - 20,
             left: 0,
@@ -138,7 +129,56 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // CARD PENERIMA
+                            // ── MERCHANT INFO ──────────────────────────────
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3F3),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFF5E1E1)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.qr_code_2_rounded,
+                                    color: Color(0xFF8C0E1A),
+                                    size: 30,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.merchantName.toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Metode: QRIS • ${widget.category}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // ── MERCHANT INFO ──────────────────────────────
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
@@ -152,7 +192,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      _getInitials(widget.recipientName),
+                                      _getInitials(widget.merchantName),
                                       style: const TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
@@ -161,26 +201,24 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                                     ),
                                   ),
                                 ),
-
                                 const SizedBox(width: 16),
-
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        widget.recipientName.toUpperCase(),
+                                        widget.merchantName.toUpperCase(),
                                         style: const TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 0),
+                                      const SizedBox(height: 2),
                                       Text(
-                                        '${widget.recipientBank} • ${widget.recipientAccount}',
+                                        'QRIS • ${widget.category}',
                                         style: const TextStyle(
-                                          fontSize: 17,
+                                          fontSize: 15,
                                           color: Colors.black54,
                                         ),
                                       ),
@@ -193,7 +231,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
 
                           const SizedBox(height: 32),
 
-                          // NOMINAL
+                          // ── NOMINAL ────────────────────────────────────
                           const Text(
                             'Nominal',
                             style: TextStyle(
@@ -203,9 +241,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                               fontFamily: 'Calibri',
                             ),
                           ),
-
                           const SizedBox(height: 10),
-
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
@@ -220,7 +256,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                               ),
                               Expanded(
                                 child: TextField(
-                                  controller: _nominalController,
+                                  controller: _amountController,
                                   keyboardType: TextInputType.number,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -243,14 +279,13 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                               ),
                             ],
                           ),
-
                           const Divider(thickness: 1, color: Colors.black26),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
 
-                          // TRANSFER DARI
+                          // ── BAYAR MENGGUNAKAN ──────────────────────────
                           const Text(
-                            'Transfer dari',
+                            'Trasnfer Dari',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -258,9 +293,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                               fontFamily: 'Calibri',
                             ),
                           ),
-
                           const SizedBox(height: 10),
-
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -273,16 +306,19 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                             ),
                             child: Row(
                               children: [
-                                Container(
+                                SizedBox(
                                   width: 35,
                                   height: 35,
                                   child: SvgPicture.asset(
                                     'assets/icons/Savers.svg',
                                     fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.account_balance_wallet,
+                                      color: Color(0xFF8C0E1A),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -297,11 +333,10 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _balanceVisible = !_balanceVisible;
-                                          });
-                                        },
+                                        onTap: () => setState(
+                                          () => _balanceVisible =
+                                              !_balanceVisible,
+                                        ),
                                         child: Row(
                                           children: [
                                             Icon(
@@ -334,41 +369,12 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                               ],
                             ),
                           ),
-
-                          const SizedBox(height: 25),
-
-                          // CATATAN
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEAEAEA),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: TextField(
-                              controller: _catatanController,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'Catatan (Opsional)',
-                                hintStyle: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black45,
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 20,
-                                ),
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
 
-                  // BUTTON
+                  // ── BUTTON ─────────────────────────────────────────────
                   Padding(
                     padding: EdgeInsets.only(
                       left: 20,
@@ -382,49 +388,31 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(30),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                          gradient: LinearGradient(
+                            colors: _isPayEnabled
+                                ? [
+                                    const Color(0xFFCC0000),
+                                    const Color(0xFF8C0E1A),
+                                  ]
+                                : [Color(0xFFE2E2E6), Color(0xFFE2E2E6)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
                         ),
                         child: ElevatedButton(
-                          onPressed: _isButtonEnabled
-                              ? () {
-                                  final cleanNominalText = _nominalController
-                                      .text
-                                      .replaceAll(RegExp(r'[^0-9]'), '');
-
-                                  final double nominalVal =
-                                      double.tryParse(cleanNominalText) ?? 0.0;
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => RingkasanTransferScreen(
-                                        recipientName: widget.recipientName,
-                                        recipientBank: widget.recipientBank,
-                                        recipientAccount:
-                                            widget.recipientAccount,
-                                        nominal: nominalVal,
-                                        catatan: _catatanController.text,
-                                        senderAccount: _accountMasked,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : null,
+                          onPressed: _isPayEnabled ? _onConfirmPayment : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             disabledBackgroundColor: Colors.transparent,
+                            disabledForegroundColor: Colors.white,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
                           ),
                           child: const Text(
-                            'Selanjutnya',
+                            'Konfirmasi Pembayaran',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -442,9 +430,38 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
       ),
     );
   }
+
+  void _onConfirmPayment() {
+    final double amtVal = double.tryParse(_amountController.text) ?? 0.0;
+    if (amtVal > _accountBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Saldo Anda tidak mencukupi.'),
+          backgroundColor: Color(0xFF8C0E1A),
+        ),
+      );
+      return;
+    }
+    final randId = 'QRIS-${100000 + Random().nextInt(900000)}';
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KonfirmasiPinScreen(
+          recipientName: widget.merchantName,
+          recipientBank: widget.category,
+          recipientAccount: randId,
+          nominal: amtVal,
+          catatan: '',
+          transactionType: 'qris',
+          category: widget.category,
+          transactionMethod: 'QRIS',
+        ),
+      ),
+    );
+  }
 }
 
-// HEADER
+// ── Header dengan background SVG ─────────────────────────────────────────
 class _SimpleHeader extends StatelessWidget {
   const _SimpleHeader({
     required this.title,
@@ -462,10 +479,6 @@ class _SimpleHeader extends StatelessWidget {
       width: double.infinity,
       height: height,
       child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(0),
-          bottomRight: Radius.circular(0),
-        ),
         child: Stack(
           children: [
             Positioned.fill(

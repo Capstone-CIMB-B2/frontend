@@ -7,6 +7,7 @@ import '../widgets/personalization_banner.dart';
 import 'personalisasi_screen.dart';
 import '../services/api_service.dart';
 import '../models/transaction_response.dart';
+import 'riwayat_transaksi_screen.dart';
 
 String formatCurrency(double amount) {
   return 'IDR ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
@@ -39,6 +40,11 @@ class _OctoHomeScreenLoggedInState extends State<OctoHomeScreenLoggedIn> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: QrisFab(
         onTap: () {
+          ApiService.trackInteraction(
+            featureAccessed: 'QRIS',
+            action: 'click',
+            interactionType: 'feature_click',
+          );
           Navigator.pushNamed(context, '/qris');
         },
       ),
@@ -80,7 +86,7 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
 
   Future<void> _loadTransactions() async {
     setState(() => _isLoadingTransactions = true);
-    final trxs = await ApiService.getRecentTransactions(limit: 5);
+    final trxs = await ApiService.getRecentTransactions(limit: 4);
     if (mounted) {
       setState(() {
         if (trxs != null) {
@@ -1133,7 +1139,16 @@ class _MenuGrid extends StatelessWidget {
                                 interactionType: 'feature_click',
                               );
                               Navigator.pushNamed(context, '/transfer');
-                            } else if (item['label'] == 'Tagihan &\nIsi Ulang') {
+                            } else if (item['label'] == 'QRIS' ||
+                                item['label'] == 'QRIS Tap') {
+                              ApiService.trackInteraction(
+                                featureAccessed: 'QRIS',
+                                action: 'click',
+                                interactionType: 'feature_click',
+                              );
+                              Navigator.pushNamed(context, '/qris');
+                            } else if (item['label'] ==
+                                'Tagihan &\nIsi Ulang') {
                               ApiService.trackInteraction(
                                 featureAccessed: 'Tagihan & Isi Ulang',
                                 action: 'click',
@@ -1249,11 +1264,11 @@ class _NewsSectionState extends State<_NewsSection> {
   int _newsTab = 0;
   static const _tabs = ['Semua', 'Promosi', 'Berita'];
   static const _articles = [
-    {'image': 'assets/banner/Berita1.png', 'type': 'Berita'},
-    {'image': 'assets/banner/Berita2.png', 'type': 'Berita'},
-    {'image': 'assets/banner/Berita3.png', 'type': 'Berita'},
+    {'image': 'assets/banner/berita/askocto.jpg', 'type': 'Berita'},
     {'image': 'assets/banner/promosi/octoloan-qris.jpg', 'type': 'Promosi'},
     {'image': 'assets/banner/promosi/goalsavers-valas.png', 'type': 'Promosi'},
+    {'image': 'assets/banner/berita/adsocto.png', 'type': 'Berita'},
+    {'image': 'assets/banner/berita/securityawareness.jpg', 'type': 'Berita'},
     {'image': 'assets/banner/promosi/os-bifast.jpg', 'type': 'Promosi'},
     {'image': 'assets/banner/promosi/mastercard-rev.jpg', 'type': 'Promosi'},
   ];
@@ -1507,83 +1522,107 @@ class _RecentTransactionsSection extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      itemCount: transactions.length,
-      separatorBuilder: (_, __) => const Divider(
-        color: Color(0xFFF5F5F5),
-        height: 24,
-        thickness: 1,
-      ),
-      itemBuilder: (context, index) {
-        final trx = transactions[index];
-        final cat = trx.category;
-        final icon = _getCategoryIcon(cat);
-        final bgColor = _getCategoryColor(cat);
-        final iconColor = _getCategoryIconColor(cat);
+    final displayTransactions = transactions.take(4).toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: displayTransactions.length,
+          separatorBuilder: (_, __) =>
+              const Divider(color: Color(0xFFF5F5F5), height: 24, thickness: 1),
+          itemBuilder: (context, index) {
+            final trx = displayTransactions[index];
+            final cat = trx.category;
+            final icon = _getCategoryIcon(cat);
+            final bgColor = _getCategoryColor(cat);
+            final iconColor = _getCategoryIconColor(cat);
 
-        final displayDate = trx.timestamp.length >= 10
-            ? trx.timestamp.substring(0, 10)
-            : trx.timestamp;
+            final displayDate = trx.timestamp.length >= 10
+                ? trx.timestamp.substring(0, 10)
+                : trx.timestamp;
 
-        return Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 22,
+            return Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+                  child: Center(child: Icon(icon, color: iconColor, size: 22)),
                 ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trx.merchantName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trx.merchantName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$cat • $displayDate',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$cat • $displayDate',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '- ${formatCurrency(trx.amount)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF7B0000),
                   ),
-                ],
+                ),
+              ],
+            );
+          },
+        ),
+        const Divider(color: Color(0xFFF5F5F5), height: 24, thickness: 1),
+        InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RiwayatTransaksiScreen(),
               ),
+            );
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Lihat Riwayat Transaksi',
+                  style: TextStyle(
+                    color: Color(0xFF7B0000),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    fontFamily: 'Calibri',
+                  ),
+                ),
+                SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF7B0000),
+                  size: 18,
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Text(
-              '- ${formatCurrency(trx.amount)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: Color(0xFF7B0000),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }
-

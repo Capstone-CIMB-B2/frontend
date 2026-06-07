@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'detail_transfer_screen.dart';
 import 'payment_screen.dart';
-
+import '../services/api_service.dart';
 
 class TagihanScreen extends StatefulWidget {
   const TagihanScreen({super.key});
@@ -64,16 +64,42 @@ class _TagihanScreenState extends State<TagihanScreen> {
       ],
     ),
     const _ServiceItem(
-      label: 'Pajak',
-      category: 'lainnya',
-      iconPath: 'assets/icons/tagihan/Pajak.svg',
-      keywords: ['pajak', 'pbb'],
+      label: 'Listrik',
+      category: 'tagihan_isi_ulang',
+      iconPath: 'assets/icons/tagihan/Listrik.svg',
+      keywords: [
+        'listrik',
+        'pln',
+        'token',
+        'prabayar',
+        'non tagihan listrik',
+        'listrik prabayar',
+      ],
     ),
     const _ServiceItem(
       label: 'PAM/PDAM',
       category: 'tagihan',
       iconPath: 'assets/icons/tagihan/PDAM.svg',
       keywords: ['pam', 'pdam'],
+    ),
+    const _ServiceItem(
+      label: 'Internet/Kabel TV',
+      category: 'tagihan',
+      iconPath: 'assets/icons/tagihan/Internet.svg',
+      keywords: [
+        'internet',
+        'kabel tv',
+        'wifi',
+        'indihome',
+        'first media',
+        'biznet',
+      ],
+    ),
+    const _ServiceItem(
+      label: 'Streaming & Hiburan',
+      category: 'tagihan',
+      iconPath: 'assets/icons/tagihan/Hiburan.svg',
+      keywords: ['netflix', 'spotify', 'youtube', 'streaming', 'hiburan'],
     ),
     const _ServiceItem(
       label: 'e-Commerce & Pembayaran',
@@ -93,17 +119,10 @@ class _TagihanScreenState extends State<TagihanScreen> {
       ],
     ),
     const _ServiceItem(
-      label: 'Listrik',
-      category: 'tagihan_isi_ulang',
-      iconPath: 'assets/icons/tagihan/Listrik.svg',
-      keywords: [
-        'listrik',
-        'pln',
-        'token',
-        'prabayar',
-        'non tagihan listrik',
-        'listrik prabayar',
-      ],
+      label: 'Pajak',
+      category: 'lainnya',
+      iconPath: 'assets/icons/tagihan/Pajak.svg',
+      keywords: ['pajak', 'pbb'],
     ),
     const _ServiceItem(
       label: 'Kartu Kredit',
@@ -116,19 +135,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
       category: 'lainnya',
       iconPath: 'assets/icons/tagihan/VirtualAccount.svg',
       keywords: ['virtual account', 'va'],
-    ),
-    const _ServiceItem(
-      label: 'Internet/Kabel TV',
-      category: 'tagihan',
-      iconPath: 'assets/icons/tagihan/Internet.svg',
-      keywords: [
-        'internet',
-        'kabel tv',
-        'wifi',
-        'indihome',
-        'first media',
-        'biznet',
-      ],
     ),
     const _ServiceItem(
       label: 'BPJS',
@@ -213,13 +219,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
       keywords: ['makanan', 'minuman', 'kuliner'],
     ),
     const _ServiceItem(
-      label: 'Streaming & Hiburan',
-      category: 'tagihan',
-      iconPath: 'assets/icons/tagihan/Ecommerce.svg',
-      keywords: ['netflix', 'spotify', 'youtube', 'streaming', 'hiburan'],
-    ),
-
-    const _ServiceItem(
       label: 'Pertamina Gas Negara (PGN)',
       category: 'isi_ulang',
       iconPath: 'assets/icons/tagihan/PGN.svg',
@@ -233,40 +232,12 @@ class _TagihanScreenState extends State<TagihanScreen> {
     ),
   ];
 
-  // Data Dummy Favorit - Tersimpan
-  final List<Map<String, String>> _initialSavedFavorites = [
-    {
-      'name': 'ShopeePay - Louhan',
-      'number': '081316274424',
-      'type': 'ShopeePay',
-      'logo': 'assets/logo/Shopeepay.svg',
-    },
-  ];
-
-  // Data Dummy Favorit - Terakhir (Recent)
-  final List<Map<String, String>> _initialRecentFavorites = [
-    {
-      'name': 'ShopeePay - Azriel Edbert',
-      'number': '081231366285',
-      'type': 'ShopeePay',
-      'logo': 'assets/logo/Shopeepay.svg',
-    },
-    {
-      'name': 'Dana - Azriel Edbert Kusuma Polin',
-      'number': '081231366285',
-      'type': 'Dana',
-      'logo': 'assets/logo/Dana.svg',
-    },
-  ];
-
-  late List<Map<String, String>> _savedFavorites;
-  late List<Map<String, String>> _recentFavorites;
+  List<Map<String, String>> _savedFavorites = [];
+  List<Map<String, String>> _recentFavorites = [];
 
   @override
   void initState() {
     super.initState();
-    _savedFavorites = List.from(_initialSavedFavorites);
-    _recentFavorites = List.from(_initialRecentFavorites);
 
     _searchController.addListener(() {
       setState(() {
@@ -280,6 +251,78 @@ class _TagihanScreenState extends State<TagihanScreen> {
         _favSearchQuery = _favSearchController.text.trim().toLowerCase();
       });
     });
+
+    _fetchSavedFavorites();
+    _fetchRecentFavorites();
+  }
+
+  String _getWalletLogo(String type) {
+    switch (type.toLowerCase()) {
+      case 'shopeepay':
+        return 'assets/logo/Shopeepay.svg';
+      case 'gopay':
+        return 'assets/gopay.svg';
+      case 'ovo':
+        return 'assets/logo/OVO.svg';
+      case 'dana':
+        return 'assets/logo/Dana.svg';
+      default:
+        return 'assets/logo/Shopeepay.svg';
+    }
+  }
+
+  Future<void> _fetchSavedFavorites() async {
+    try {
+      final data = await ApiService.getSavedContacts(excludeCategory: 'Transfer');
+      if (data != null && mounted) {
+        setState(() {
+          _savedFavorites = data.map<Map<String, String>>((x) {
+            final type = x['bank_name']?.toString() ?? 'E-Wallet';
+            return {
+              'id': x['id']?.toString() ?? '',
+              'name': x['name']?.toString() ?? '',
+              'number': x['account_number']?.toString() ?? '',
+              'type': type,
+              'logo': _getWalletLogo(type),
+            };
+          }).toList();
+        });
+      }
+    } catch (e) {
+      // silent
+    }
+  }
+
+  Future<void> _fetchRecentFavorites() async {
+    try {
+      final trxs = await ApiService.getRecentTransactions(
+        limit: 10,
+        excludeMethod: 'Transfer',
+      );
+      if (trxs != null && mounted) {
+        setState(() {
+          final seen = <String>{};
+          final list = <Map<String, String>>[];
+          for (var trx in trxs) {
+            final numVal = trx.recipientAccount ?? '';
+            final type = trx.merchantName;
+            final key = '$numVal|$type';
+            if (!seen.contains(key) && numVal.isNotEmpty && type.isNotEmpty) {
+              seen.add(key);
+              list.add({
+                'name': '$type - $numVal',
+                'number': numVal,
+                'type': type,
+                'logo': _getWalletLogo(type),
+              });
+            }
+          }
+          _recentFavorites = list;
+        });
+      }
+    } catch (e) {
+      // silent
+    }
   }
 
   @override
@@ -436,10 +479,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
     _showCustomBottomSheet(
       title: 'Layanan Listrik PLN',
       child: _buildSimpleOptionsSheet(
-        options: const [
-          'Tagihan Listrik PLN',
-          'Token Listrik PLN',
-        ],
+        options: const ['Tagihan Listrik PLN', 'Token Listrik PLN'],
         onSelect: (option) {
           Navigator.pop(context);
           Navigator.push(
@@ -502,7 +542,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
       ),
     );
   }
-
 
   // Helper menampilkan bottom sheet konsisten
   void _showCustomBottomSheet({required String title, required Widget child}) {
@@ -1164,38 +1203,33 @@ class _TagihanScreenState extends State<TagihanScreen> {
                         Icons.person_add_alt_1_outlined,
                         color: Color(0xFF8C0E1A),
                       ),
-                      onPressed: () {
-                        // Tambahkan ke tersimpan
-                        setState(() {
-                          final exist = _savedFavorites.any(
-                            (element) => element['name'] == item['name'],
+                      onPressed: () async {
+                        final res = await ApiService.addSavedContact(
+                          name: item['name']!,
+                          accountNumber: item['number']!,
+                          bankName: item['type']!,
+                          category: 'TopUp',
+                        );
+                        if (res != null && res['success'] == true) {
+                          _fetchSavedFavorites();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${item['name']} disimpan ke favorit!',
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
                           );
-                          if (!exist) {
-                            _savedFavorites.add({
-                              'name': item['name']!,
-                              'number': item['number']!,
-                              'type': item['type']!,
-                              'logo': item['logo']!,
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${item['name']} disimpan ke favorit!',
-                                ),
-                                duration: const Duration(seconds: 2),
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                res?['message'] ?? 'Gagal menyimpan kontak',
                               ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${item['name']} sudah ada di favorit!',
-                                ),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        });
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       },
                     ),
                 ],
@@ -1390,17 +1424,17 @@ class _EWalletBottomSheetContentState
   String _query = '';
 
   final List<Map<String, String>> _wallets = [
-    {'name': 'Flazz BCA', 'logo': 'assets/logo/FlazzBCA.svg'},
-    {'name': 'BNI TapCash', 'logo': 'assets/logo/TapCash.svg'},
     {'name': 'ShopeePay', 'logo': 'assets/logo/Shopeepay.svg'},
     {'name': 'Gopay', 'logo': 'assets/gopay.svg'},
     {'name': 'Ovo', 'logo': 'assets/logo/OVO.svg'},
     {'name': 'Dana', 'logo': 'assets/logo/Dana.svg'},
-    {'name': 'Doku Wallet', 'logo': 'assets/logo/DOKU.svg'},
-    {'name': 'iPaymu', 'logo': 'assets/Logo/IPaymu.png'},
-    {'name': 'AstraPay', 'logo': 'assets/logo/AstraPay.png'},
-    {'name': 'LinkAja', 'logo': 'assets/logo/LinkAja.svg'},
-    {'name': 'OTTOCASH', 'logo': 'assets/logo/OTTOCASH.png'},
+    // {'name': 'Flazz BCA', 'logo': 'assets/logo/FlazzBCA.svg'},
+    // {'name': 'BNI TapCash', 'logo': 'assets/logo/TapCash.svg'},
+    // {'name': 'Doku Wallet', 'logo': 'assets/logo/DOKU.svg'},
+    // {'name': 'iPaymu', 'logo': 'assets/Logo/IPaymu.png'},
+    // {'name': 'AstraPay', 'logo': 'assets/logo/AstraPay.png'},
+    // {'name': 'LinkAja', 'logo': 'assets/logo/LinkAja.svg'},
+    // {'name': 'OTTOCASH', 'logo': 'assets/logo/OTTOCASH.png'},
   ];
 
   @override

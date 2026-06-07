@@ -108,6 +108,8 @@ class _KonfirmasiPinScreenState extends State<KonfirmasiPinScreen> {
         amount: widget.nominal,
         notes: widget.catatan,
         pin: _pin,
+        recipientBank: widget.recipientBank,
+        recipientAccount: widget.recipientAccount,
       );
     } else {
       result = await ApiService.transfer(
@@ -222,6 +224,11 @@ class _KonfirmasiPinScreenState extends State<KonfirmasiPinScreen> {
                             ? 'Produk/Merchant'
                             : 'Penerima',
                     widget.recipientName,
+                    icon: widget.transactionType == 'qris'
+                        ? Icons.storefront_rounded
+                        : widget.transactionType == 'tagihan'
+                            ? Icons.receipt_long_rounded
+                            : Icons.person_outline,
                   ),
                   const SizedBox(height: 10),
                   _buildDetailRow(
@@ -235,6 +242,11 @@ class _KonfirmasiPinScreenState extends State<KonfirmasiPinScreen> {
                         : widget.transactionType == 'tagihan'
                             ? (widget.transactionMethod ?? 'Bayar Tagihan')
                             : widget.recipientBank,
+                    icon: widget.transactionType == 'qris'
+                        ? Icons.qr_code_2_rounded
+                        : widget.transactionType == 'tagihan'
+                            ? Icons.payment_rounded
+                            : Icons.account_balance_rounded,
                   ),
                   const SizedBox(height: 10),
                   _buildDetailRow(
@@ -244,27 +256,39 @@ class _KonfirmasiPinScreenState extends State<KonfirmasiPinScreen> {
                             ? 'No. Kontrak/HP'
                             : 'No. Rekening',
                     widget.recipientAccount,
+                    icon: widget.transactionType == 'qris'
+                        ? Icons.pin_outlined
+                        : widget.transactionType == 'tagihan'
+                            ? Icons.phone_android_rounded
+                            : Icons.credit_card_rounded,
                   ),
                   const SizedBox(height: 10),
                   _buildDetailRow(
                     'Nominal',
                     'Rp${_formatRupiah(widget.nominal)}',
+                    icon: Icons.monetization_on_outlined,
                   ),
                   const SizedBox(height: 10),
                   _buildDetailRow(
                     'Biaya Transaksi',
                     'Rp${_formatRupiah(transactionFee)}',
+                    icon: Icons.receipt_outlined,
                   ),
                   const SizedBox(height: 10),
                   _buildDetailRow(
                     'Total Transaksi',
                     'Rp${_formatRupiah(totalAmount)}',
                     isBold: true,
+                    icon: Icons.calculate_outlined,
                   ),
 
                   if (widget.catatan.trim().isNotEmpty) ...[
                     const SizedBox(height: 10),
-                    _buildDetailRow('Catatan', widget.catatan),
+                    _buildDetailRow(
+                      'Catatan',
+                      widget.catatan,
+                      icon: Icons.notes_rounded,
+                    ),
                   ],
 
                   const SizedBox(height: 24),
@@ -308,33 +332,45 @@ class _KonfirmasiPinScreenState extends State<KonfirmasiPinScreen> {
   }
 
 
-  Widget _buildDetailRow(String label, String value, {bool isBold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-            fontFamily: 'Calibri',
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
+  Widget _buildDetailRow(String label, String value, {bool isBold = false, IconData? icon}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 20,
+              color: const Color(0xFF8C0E1A),
+            ),
+            const SizedBox(width: 12),
+          ] else ...[
+            const SizedBox(width: 32),
+          ],
+          Text(
+            label,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: Colors.black,
+              color: Colors.grey[600],
               fontFamily: 'Calibri',
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 20),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                color: Colors.black,
+                fontFamily: 'Calibri',
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

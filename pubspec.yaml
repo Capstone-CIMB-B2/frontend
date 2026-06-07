@@ -32,6 +32,7 @@ flutter:
     - assets/gopay-logo.svg
     - assets/icons/
     - assets/icons/tagihan/
+    - assets/icons/QRIS/
     - assets/logo/
     - assets/banner/promosi/
     - assets/banner/berita/

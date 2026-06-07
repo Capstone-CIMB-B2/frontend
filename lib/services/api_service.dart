@@ -177,6 +177,8 @@ class ApiService {
     required double amount,
     required String notes,
     required String pin,
+    String? recipientBank,
+    String? recipientAccount,
   }) async {
     final token = await AuthManager.getToken();
     if (token == null) return null;
@@ -195,6 +197,8 @@ class ApiService {
           'amount': amount,
           'notes': notes,
           'pin': pin,
+          'recipient_bank': recipientBank,
+          'recipient_account': recipientAccount,
         }),
       );
 
@@ -285,13 +289,23 @@ class ApiService {
   // 6. Get Recent Transactions
   static Future<List<TransactionResponse>?> getRecentTransactions({
     int limit = 5,
+    String? transactionMethod,
+    String? category,
+    String? excludeMethod,
+    String? excludeCategory,
   }) async {
     final token = await AuthManager.getToken();
     if (token == null) return null;
 
     try {
+      var url = '$baseUrl/transactions/recent?limit=$limit';
+      if (transactionMethod != null) url += '&transaction_method=$transactionMethod';
+      if (category != null) url += '&category=$category';
+      if (excludeMethod != null) url += '&exclude_method=$excludeMethod';
+      if (excludeCategory != null) url += '&exclude_category=$excludeCategory';
+
       final response = await http.get(
-        Uri.parse('$baseUrl/transactions/recent?limit=$limit'),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -307,6 +321,77 @@ class ApiService {
       }
     } catch (e) {
       // Silent error fallback
+    }
+    return null;
+  }
+
+  // 6b. Get Saved Contacts
+  static Future<List<dynamic>?> getSavedContacts({
+    String? category,
+    String? excludeCategory,
+  }) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      var url = '$baseUrl/api/v1/saved-contacts';
+      final params = <String>[];
+      if (category != null) params.add('category=$category');
+      if (excludeCategory != null) params.add('exclude_category=$excludeCategory');
+      if (params.isNotEmpty) {
+        url += '?${params.join('&')}';
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      }
+    } catch (e) {
+      // silent fail
+    }
+    return null;
+  }
+
+  // 6c. Add Saved Contact
+  static Future<Map<String, dynamic>?> addSavedContact({
+    required String name,
+    required String accountNumber,
+    String? bankName,
+    required String category,
+  }) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/saved-contacts'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'name': name,
+          'account_number': accountNumber,
+          'bank_name': bankName,
+          'category': category,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 201) {
+        return {'success': true, 'data': responseData};
+      } else {
+        return {'success': false, 'message': responseData['detail'] ?? 'Gagal menyimpan kontak'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal menghubungkan ke server: $e'};
     }
   }
 

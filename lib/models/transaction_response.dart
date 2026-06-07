@@ -6,6 +6,9 @@ class TransactionResponse {
   final String transactionMethod;
   final double amount;
 
+  final String? recipientBank;
+  final String? recipientAccount;
+
   TransactionResponse({
     required this.trxId,
     required this.timestamp,
@@ -13,6 +16,8 @@ class TransactionResponse {
     required this.merchantName,
     required this.transactionMethod,
     required this.amount,
+    this.recipientBank,
+    this.recipientAccount,
   });
 
   factory TransactionResponse.fromJson(Map<String, dynamic> json) {
@@ -23,6 +28,8 @@ class TransactionResponse {
       merchantName: json['merchant_name'] ?? '',
       transactionMethod: json['transaction_method'] ?? '',
       amount: double.tryParse((json['amount'] ?? 0.0).toString()) ?? 0.0,
+      recipientBank: json['recipient_bank'],
+      recipientAccount: json['recipient_account'],
     );
   }
 }

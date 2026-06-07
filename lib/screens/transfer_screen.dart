@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'rekening_lain_screen.dart';
 import 'detail_transfer_screen.dart';
+import '../services/api_service.dart';
 
 // TRANSFER SCREEN
 // ─────────────────────────────────────────────
@@ -25,49 +26,11 @@ class _TransferScreenState extends State<TransferScreen> {
     'Poin Xtra',
   ];
 
-  // Data dummy untuk tab "Tersimpan"
-  final List<Map<String, String>> _savedContacts = [
-    {
-      'name': 'GANTANG SATRIA YUDHA',
-      'initials': 'GS',
-      'bank': 'BNI',
-      'account': '1791687886',
-    },
-    {
-      'name': 'AHMAD YUJIN',
-      'initials': 'AY',
-      'bank': 'BCA',
-      'account': '2203948728',
-    },
-  ];
+  // Data kontak tab "Tersimpan"
+  List<Map<String, String>> _savedContacts = [];
 
-  // Data dummy untuk tab "Terakhir"
-  final List<Map<String, String>> _recentContacts = [
-    {
-      'name': 'ADITRI SURYA',
-      'initials': 'AS',
-      'bank': 'BNI',
-      'account': '1791687886',
-    },
-    {
-      'name': 'NUR SATRIA JATIKUSUMAH',
-      'initials': 'NS',
-      'bank': 'CIMB NIAGA',
-      'account': '123957642882',
-    },
-    {
-      'name': 'NUR SATRIA JATIKUSUMAH',
-      'initials': 'NS',
-      'bank': 'CIMB NIAGA',
-      'account': '123957642882',
-    },
-    {
-      'name': 'NUR SATRIA JATIKUSUMAH',
-      'initials': 'NS',
-      'bank': 'CIMB NIAGA',
-      'account': '123957642882',
-    },
-  ];
+  // Data kontak tab "Terakhir"
+  List<Map<String, String>> _recentContacts = [];
 
   @override
   void initState() {
@@ -78,28 +41,73 @@ class _TransferScreenState extends State<TransferScreen> {
       });
     });
 
-    // TODO: Hubungkan dengan API endpoint pada saat inisialisasi untuk memuat data dari backend
     _fetchSavedContacts();
     _fetchRecentContacts();
   }
 
-  // TODO: Integrasikan API endpoint untuk mengambil data kontak tersimpan
-  // Contoh: GET /api/transfer/saved
-  Future<void> _fetchSavedContacts() async {
-    // setState(() => _isLoading = true);
-    // try {
-    //   final data = await ApiService.getSavedContacts();
-    //   setState(() => _savedContacts = data);
-    // } catch (e) { ... }
+  String _getInitials(String name) {
+    final clean = name.trim();
+    if (clean.isEmpty) return 'SA';
+    final parts = clean.split(RegExp(r'\s+'));
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
   }
 
-  // TODO: Integrasikan API endpoint untuk mengambil data kontak terakhir/terbaru
-  // Contoh: GET /api/transfer/recent
+  Future<void> _fetchSavedContacts() async {
+    try {
+      final data = await ApiService.getSavedContacts(category: 'Transfer');
+      if (data != null && mounted) {
+        setState(() {
+          _savedContacts = data.map<Map<String, String>>((x) {
+            final name = x['name']?.toString() ?? '';
+            return {
+              'id': x['id']?.toString() ?? '',
+              'name': name,
+              'initials': _getInitials(name),
+              'bank': x['bank_name']?.toString() ?? '',
+              'account': x['account_number']?.toString() ?? '',
+            };
+          }).toList();
+        });
+      }
+    } catch (e) {
+      // silent
+    }
+  }
+
   Future<void> _fetchRecentContacts() async {
-    // try {
-    //   final data = await ApiService.getRecentContacts();
-    //   setState(() => _recentContacts = data);
-    // } catch (e) { ... }
+    try {
+      final trxs = await ApiService.getRecentTransactions(
+        limit: 10,
+        transactionMethod: 'Transfer',
+      );
+      if (trxs != null && mounted) {
+        setState(() {
+          final seen = <String>{};
+          final contacts = <Map<String, String>>[];
+          for (var trx in trxs) {
+            final name = trx.merchantName;
+            final bank = trx.recipientBank ?? 'CIMB NIAGA';
+            final acc = trx.recipientAccount ?? '';
+            final key = '$name|$bank|$acc';
+            if (!seen.contains(key) && name.isNotEmpty && acc.isNotEmpty) {
+              seen.add(key);
+              contacts.add({
+                'name': name,
+                'initials': _getInitials(name),
+                'bank': bank,
+                'account': acc,
+              });
+            }
+          }
+          _recentContacts = contacts;
+        });
+      }
+    } catch (e) {
+      // silent
+    }
   }
 
   @override
@@ -465,7 +473,6 @@ class _TransferTypeButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          // Menggunakan border outline abu-abu terang alih-alih bayangan (shadow)
           border: Border.all(color: const Color(0xFFE2E2E6), width: 1.2),
         ),
         child: Row(
