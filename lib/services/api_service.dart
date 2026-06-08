@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/promo_response.dart';
 import '../models/transaction_response.dart';
@@ -8,13 +6,7 @@ import 'auth_manager.dart';
 
 class ApiService {
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000';
-    } else if (Platform.isAndroid) {
-      return 'http://192.168.2.243:8000';
-    } else {
-      return 'http://localhost:8000';
-    }
+    return 'https://capstone-backend.up.railway.app';
   }
 
   // 1. Register

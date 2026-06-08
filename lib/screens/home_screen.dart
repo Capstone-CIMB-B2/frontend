@@ -505,16 +505,6 @@ class _AccountCardState extends State<_AccountCard> {
             : widget.accountMasked,
         'balance': widget.balance,
       },
-      //  DUMMY - E-Wallet card (uncomment kalau sudah ada data real)
-      // {
-      //   'type': 'E-Wallet',
-      //   'badgeColor': const Color(0xFF4A0000),
-      //   'name': 'OCTO Pay',
-      //   'accountDisplay': widget.balanceVisible
-      //       ? '(5271 8321 0012 1854)'
-      //       : '(••••1854)',
-      //   'balance': 2450000.0,
-      // },
     ];
 
     return Column(
@@ -918,14 +908,14 @@ class _EWalletSection extends StatelessWidget {
                               ),
                               minimumSize: const Size(0, 28),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
+                                horizontal: 14,
                                 vertical: 4,
                               ),
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               elevation: 0,
                             ),
                             child: const Text(
-                              'Connect',
+                              'Hubungkan',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w400,
@@ -1453,7 +1443,7 @@ class _RecentTransactionsSection extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
           child: Text(
-            'Aktivitas Terakhir',
+            'Aktivitas Anda',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,

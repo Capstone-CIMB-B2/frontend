@@ -132,7 +132,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   /// Merchant yang punya asset PNG.
   static const _pngMerchants = {
-    'Ovo', 'Telkom', 'Youtube',
+    'Ovo', 'Telkom', 'Youtube', 'Pdam'
   };
 
   /// Tipe asset: 'svg', 'png', atau null jika tidak ada.

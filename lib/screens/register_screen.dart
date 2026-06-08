@@ -8,13 +8,14 @@ import '../services/api_service.dart';
 import '../main.dart';
 
 enum Pekerjaan {
-  pelajar_mahasiswa("Pelajar / Mahasiswa"),
-  fresh_graduate("Fresh Graduate"),
-  karyawan_swasta("Karyawan Swasta"),
-  pns("PNS"),
-  pengusaha("Pengusaha / Wirausaha"),
-  profesional("Profesional"),
-  freelancer("Freelancer");
+  student('Student'),
+  fresh_graduate('Fresh Graduate'),
+  private_employee('Private Employee'),
+  civil_servant('Civil Servant'),
+  doctor('Doctor'),
+  lawyer('Lawyer'),
+  entrepreneur('Entrepreneur'),
+  freelancer('Freelancer');
 
   final String label;
   const Pekerjaan(this.label);
@@ -977,6 +978,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
         : _pinConfirmController;
     final filledCount = currentController.text.length;
 
+    final VoidCallback del = () {
+      final controller = _pinPhase == 1
+          ? _pinController
+          : _pinConfirmController;
+      if (controller.text.isNotEmpty) {
+        setState(() {
+          controller.text = controller.text.substring(
+            0,
+            controller.text.length - 1,
+          );
+          _pinError = false;
+        });
+      }
+    };
+
     return Column(
       children: [
         // Title & subtitle
@@ -1006,7 +1022,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       : 'Masukkan kembali PIN yang sudah kamu buat untuk konfirmasi.',
                   key: ValueKey(_pinPhase),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     color: Colors.black54,
                     height: 1.4,
@@ -1026,9 +1042,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             final isError = _pinError && _pinPhase == 2;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: 16,
-              height: 16,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isError
@@ -1049,59 +1065,103 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ],
 
-        const Spacer(),
+        const SizedBox(height: 60),
 
-        // Numpad
+        // Keypad
         Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            0,
-            24,
-            MediaQuery.of(context).padding.bottom + 24,
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildKeypadButton('1'),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('2'),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('3'),
+                ],
+              ),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildKeypadButton('4'),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('5'),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('6'),
+                ],
+              ),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildKeypadButton('7'),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('8'),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('9'),
+                ],
+              ),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(width: 70, height: 70),
+                  const SizedBox(width: 30),
+                  _buildKeypadButton('0'),
+                  const SizedBox(width: 30),
+                  _buildBackspaceButton(del),
+                ],
+              ),
+            ],
           ),
-          child: _buildNumpad(),
         ),
       ],
     );
   }
 
-  Widget _buildNumpad() {
-    final keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 2.5,
-      children: keys.map((key) {
-        if (key.isEmpty) return const SizedBox();
-        if (key == 'del') {
-          return GestureDetector(
-            onTap: _onNumpadDelete,
-            child: Container(
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.backspace_outlined,
-                size: 24,
-                color: Colors.black87,
-              ),
-            ),
-          );
-        }
-        return GestureDetector(
-          onTap: () => _onNumpadTap(key),
-          child: Container(
-            alignment: Alignment.center,
-            child: Text(
-              key,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
+  Widget _buildKeypadButton(String val) {
+    return GestureDetector(
+      onTap: () => _onNumpadTap(val),
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF1F1F3),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          val,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
-        );
-      }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackspaceButton(VoidCallback onDelete) {
+    return GestureDetector(
+      onTap: onDelete,
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF1F1F3),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.backspace_outlined,
+          size: 24,
+          color: Colors.black87,
+        ),
+      ),
     );
   }
 
