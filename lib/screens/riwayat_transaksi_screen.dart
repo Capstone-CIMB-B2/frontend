@@ -33,83 +33,123 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     }
   }
 
-  String _formatCurrency(double amount) {
+  int _selectedMonthIndex = 5; // Default to June
+  final List<String> _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+
+  String formatRpCurrency(double amount) {
     int val = amount.toInt();
     String str = val.toString();
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    return 'IDR ${str.replaceAllMapped(reg, (Match m) => '${m[1]}.')}';
+    return 'Rp ${str.replaceAllMapped(reg, (Match m) => '${m[1]}.')}';
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'food & beverage':
-      case 'f&b':
-        return Icons.restaurant_rounded;
-      case 'e-wallet':
-      case 'wallet':
-        return Icons.account_balance_wallet_rounded;
-      case 'transport & mobility':
-      case 'transport':
-      case 'transportasi':
-        return Icons.directions_car_rounded;
-      case 'utilities':
-      case 'tagihan':
-      case 'utility':
-        return Icons.bolt_rounded;
-      case 'lifestyle & entertainment':
-      case 'lifestyle':
-        return Icons.sports_esports_rounded;
-      default:
-        return Icons.payment_rounded;
-    }
+  String formatDateHeader(String timestamp) {
+    try {
+      final cleanTs = timestamp.replaceAll('T', ' ');
+      final datePart = cleanTs.split(' ')[0];
+      final dateSplit = datePart.split('-');
+      if (dateSplit.length == 3) {
+        final year = dateSplit[0];
+        final monthNum = dateSplit[1];
+        final day = int.parse(dateSplit[2]).toString();
+
+        const months = {
+          '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April',
+          '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus',
+          '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
+        };
+        final monthName = months[monthNum] ?? monthNum;
+        return '$day $monthName $year';
+      }
+    } catch (_) {}
+    return timestamp;
   }
 
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'food & beverage':
-      case 'f&b':
-        return const Color(0xFFFFECE5);
-      case 'e-wallet':
-      case 'wallet':
-        return const Color(0xFFE5F1FF);
-      case 'transport & mobility':
-      case 'transport':
-      case 'transportasi':
-        return const Color(0xFFE5FFE6);
-      case 'utilities':
-      case 'tagihan':
-      case 'utility':
-        return const Color(0xFFFFF9E5);
-      case 'lifestyle & entertainment':
-      case 'lifestyle':
-        return const Color(0xFFF3E5FF);
-      default:
-        return const Color(0xFFF2F2F2);
+  String getTransactionDisplayTitle(TransactionResponse trx) {
+    final method = trx.transactionMethod.toLowerCase();
+    final cat = trx.category.toLowerCase();
+    if (method == 'qris' || cat == 'qris') {
+      return 'Pembayaran QRIS';
+    } else if (method == 'top up' || method == 'topup' || cat == 'e-wallet' || cat == 'wallet') {
+      return 'Top Up E-Wallet';
+    } else if (method == 'transfer') {
+      return 'Transfer';
+    } else if (method == 'pembelian pulsa') {
+      return 'Pembelian Pulsa';
+    } else if (method == 'bayar tagihan') {
+      return 'Pembayaran Tagihan';
     }
+    return trx.transactionMethod.isNotEmpty ? trx.transactionMethod : 'Transaksi';
   }
 
-  Color _getCategoryIconColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'food & beverage':
-      case 'f&b':
-        return const Color(0xFFE05315);
-      case 'e-wallet':
-      case 'wallet':
-        return const Color(0xFF0F75BD);
-      case 'transport & mobility':
-      case 'transport':
-      case 'transportasi':
-        return const Color(0xFF2E8540);
-      case 'utilities':
-      case 'tagihan':
-      case 'utility':
-        return const Color(0xFFBF8F00);
-      case 'lifestyle & entertainment':
-      case 'lifestyle':
-        return const Color(0xFF8B25C6);
-      default:
-        return const Color(0xFF666666);
+  String getTransactionDisplaySubtitle(TransactionResponse trx) {
+    final method = trx.transactionMethod.toLowerCase();
+    final cat = trx.category.toLowerCase();
+    if (method == 'transfer') {
+      final bank = trx.recipientBank ?? 'CIMB NIAGA';
+      final acc = trx.recipientAccount ?? '';
+      return acc.isNotEmpty ? '$bank • $acc' : bank;
+    } else if (method == 'top up' || method == 'topup' || cat == 'e-wallet' || cat == 'wallet') {
+      final merchant = trx.merchantName;
+      final acc = trx.recipientAccount ?? '';
+      return acc.isNotEmpty ? '$merchant - $acc' : merchant;
     }
+    return trx.merchantName;
+  }
+
+  IconData getTransactionIcon(TransactionResponse trx) {
+    final method = trx.transactionMethod.toLowerCase();
+    final cat = trx.category.toLowerCase();
+    if (method == 'qris' || cat == 'qris') {
+      return Icons.qr_code_scanner;
+    } else if (method == 'top up' || method == 'topup' || cat == 'e-wallet' || cat == 'wallet') {
+      return Icons.account_balance_wallet;
+    } else if (method == 'transfer') {
+      return Icons.swap_horiz;
+    } else if (method == 'pembelian pulsa') {
+      return Icons.phone_android;
+    } else if (method == 'bayar tagihan') {
+      return Icons.receipt_long;
+    }
+    return Icons.payment;
+  }
+
+  Widget _buildMonthTabs() {
+    return SizedBox(
+      height: 38,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: _months.length,
+        itemBuilder: (context, index) {
+          final isActive = index == _selectedMonthIndex;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedMonthIndex = index),
+            child: Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isActive ? const Color(0xFFCC0000) : const Color(0xFFF1F1F3),
+                borderRadius: BorderRadius.circular(19),
+              ),
+              child: Text(
+                _months[index],
+                style: TextStyle(
+                  color: isActive ? Colors.white : Colors.black54,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  fontFamily: 'Calibri',
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -218,92 +258,190 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       );
     }
 
-    if (_transactions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.history_toggle_off_rounded,
-              color: Colors.grey,
-              size: 50,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Belum ada riwayat transaksi',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
+    final selectedMonthAbbr = _months[_selectedMonthIndex];
+    final Map<String, String> monthAbbrToNum = {
+      'Jan': '01',
+      'Feb': '02',
+      'Mar': '03',
+      'Apr': '04',
+      'Mei': '05',
+      'Jun': '06',
+      'Jul': '07',
+      'Agu': '08',
+      'Sep': '09',
+      'Okt': '10',
+      'Nov': '11',
+      'Des': '12',
+    };
+    final targetMonthNum = monthAbbrToNum[selectedMonthAbbr];
+
+    final filteredTrxs = _transactions.where((trx) {
+      try {
+        final cleanTs = trx.timestamp.replaceAll('T', ' ');
+        final datePart = cleanTs.split(' ')[0];
+        final dateSplit = datePart.split('-');
+        if (dateSplit.length == 3) {
+          return dateSplit[1] == targetMonthNum;
+        }
+      } catch (_) {}
+      return false;
+    }).toList();
+
+    // Group transactions by date
+    final Map<String, List<TransactionResponse>> groupedTransactions = {};
+    final List<String> sortedDates = [];
+    for (var trx in filteredTrxs) {
+      final header = formatDateHeader(trx.timestamp);
+      if (!groupedTransactions.containsKey(header)) {
+        groupedTransactions[header] = [];
+        sortedDates.add(header);
+      }
+      groupedTransactions[header]!.add(trx);
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      itemCount: _transactions.length,
-      separatorBuilder: (_, __) => const Divider(
-        color: Color(0xFFF5F5F5),
-        height: 24,
-        thickness: 1,
-      ),
-      itemBuilder: (context, index) {
-        final trx = _transactions[index];
-        final cat = trx.category;
-        final icon = _getCategoryIcon(cat);
-        final bgColor = _getCategoryColor(cat);
-        final iconColor = _getCategoryIconColor(cat);
-
-        final displayDate = trx.timestamp.length >= 10
-            ? trx.timestamp.substring(0, 10)
-            : trx.timestamp;
-
-        return Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
-              child: Center(child: Icon(icon, color: iconColor, size: 22)),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trx.merchantName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        _buildMonthTabs(),
+        const SizedBox(height: 16),
+        Expanded(
+          child: filteredTrxs.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.history_toggle_off_rounded,
+                        color: Colors.grey,
+                        size: 50,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tidak ada transaksi pada bulan ini.',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Calibri',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$cat • $displayDate',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '- ${_formatCurrency(trx.amount)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: Color(0xFF7B0000),
-              ),
-            ),
-          ],
-        );
-      },
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  itemCount: sortedDates.length,
+                  itemBuilder: (context, dateIndex) {
+                    final dateHeader = sortedDates[dateIndex];
+                    final dateTrxs = groupedTransactions[dateHeader]!;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 12),
+                        Text(
+                          dateHeader,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black,
+                            fontFamily: 'Calibri',
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Divider(color: Color(0xFFE2E2E6), thickness: 1, height: 16),
+                        const SizedBox(height: 8),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          itemCount: dateTrxs.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 18),
+                          itemBuilder: (context, trxIndex) {
+                            final trx = dateTrxs[trxIndex];
+                            final displayTitle = getTransactionDisplayTitle(trx);
+                            final displaySubtitle = getTransactionDisplaySubtitle(trx);
+
+                            return Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEEEEEE),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    getTransactionIcon(trx),
+                                    color: const Color(0xFFCC0000),
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        displayTitle,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: Colors.black,
+                                          fontFamily: 'Calibri',
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        displaySubtitle,
+                                        style: TextStyle(
+                                          color: Colors.grey[500],
+                                          fontSize: 13,
+                                          fontFamily: 'Calibri',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '-${formatRpCurrency(trx.amount)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: Colors.black,
+                                        fontFamily: 'Calibri',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Berhasil',
+                                      style: TextStyle(
+                                        color: Color(0xFF2E8540),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        fontFamily: 'Calibri',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

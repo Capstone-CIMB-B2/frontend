@@ -110,6 +110,150 @@ class _TransferScreenState extends State<TransferScreen> {
     }
   }
 
+  bool _isContactFavorited(Map<String, String> contact) {
+    return _savedContacts.any((c) => c['account'] == contact['account']);
+  }
+
+  String? _getSavedContactId(Map<String, String> contact) {
+    try {
+      return _savedContacts.firstWhere((c) => c['account'] == contact['account'])['id'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _handleFavoriteTap(Map<String, String> contact) async {
+    final isSaved = _isContactFavorited(contact);
+    if (isSaved) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Hapus Favorit',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'Calibri',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Apakah Anda yakin ingin menghapus transaksi ini dari daftar favorit?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontFamily: 'Calibri',
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text(
+                          'Kembali',
+                          style: TextStyle(
+                            color: Color(0xFFCC0000),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            fontFamily: 'Calibri',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx, true),
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Hapus',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              fontFamily: 'Calibri',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (confirm == true) {
+        final savedId = _getSavedContactId(contact);
+        if (savedId != null) {
+          final success = await ApiService.deleteSavedContact(int.parse(savedId));
+          if (success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kontak berhasil dihapus dari favorit'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            _fetchSavedContacts();
+            _fetchRecentContacts();
+          }
+        }
+      }
+    } else {
+      // Add to favorites
+      final res = await ApiService.addSavedContact(
+        name: contact['name']!,
+        accountNumber: contact['account']!,
+        bankName: contact['bank']!,
+        category: 'Transfer',
+      );
+      if (res != null && res['success'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${contact['name']} disimpan ke favorit!'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        _fetchSavedContacts();
+        _fetchRecentContacts();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res?['message'] ?? 'Gagal menyimpan kontak'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -232,6 +376,8 @@ class _TransferScreenState extends State<TransferScreen> {
                           onUbahTap: () {
                             // TODO: Navigasi ke halaman ubah penerima tersimpan
                           },
+                          isFavoritedFn: _isContactFavorited,
+                          onFavoriteTapFn: _handleFavoriteTap,
                         ),
                       ],
                     ),
@@ -604,8 +750,13 @@ class _SegmentTab extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF8C0E1A) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
+            gradient: isActive
+                ? const LinearGradient(
+                    colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                  )
+                : null,
+            color: isActive ? null : const Color(0xFFF3F3F3),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -632,6 +783,8 @@ class _ContactList extends StatelessWidget {
     required this.recentContacts,
     required this.onContactTap,
     required this.onUbahTap,
+    required this.isFavoritedFn,
+    required this.onFavoriteTapFn,
   });
 
   final bool isSavedActive;
@@ -639,6 +792,8 @@ class _ContactList extends StatelessWidget {
   final List<Map<String, String>> recentContacts;
   final ValueChanged<Map<String, String>> onContactTap;
   final VoidCallback onUbahTap;
+  final bool Function(Map<String, String>) isFavoritedFn;
+  final Function(Map<String, String>) onFavoriteTapFn;
 
   List<Map<String, String>> get _activeList =>
       isSavedActive ? savedContacts : recentContacts;
@@ -650,7 +805,7 @@ class _ContactList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header jumlah penerima & tombol ubah (hanya di tab "Tersimpan")
+        // Header jumlah penerima & tombol kelola (hanya di tab "Tersimpan")
         if (isSavedActive) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -667,7 +822,7 @@ class _ContactList extends StatelessWidget {
               GestureDetector(
                 onTap: onUbahTap,
                 child: const Text(
-                  'Ubah',
+                  'Kelola',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -678,7 +833,7 @@ class _ContactList extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
         ],
 
         // Daftar kontak
@@ -702,15 +857,14 @@ class _ContactList extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             itemCount: contacts.length,
-            separatorBuilder: (_, __) => const Divider(
-              color: Color(0xFFEFEFEF),
-              height: 1,
-              thickness: 1,
-            ),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
+              final contact = contacts[index];
               return _ContactItem(
-                contact: contacts[index],
-                onTap: () => onContactTap(contacts[index]),
+                contact: contact,
+                onTap: () => onContactTap(contact),
+                isFavorited: isFavoritedFn(contact),
+                onFavoriteTap: () => onFavoriteTapFn(contact),
               );
             },
           ),
@@ -722,34 +876,42 @@ class _ContactList extends StatelessWidget {
 // CONTACT ITEM
 // ─────────────────────────────────────────────
 class _ContactItem extends StatelessWidget {
-  const _ContactItem({required this.contact, required this.onTap});
+  const _ContactItem({
+    required this.contact,
+    required this.onTap,
+    required this.isFavorited,
+    required this.onFavoriteTap,
+  });
 
   final Map<String, String> contact;
   final VoidCallback onTap;
+  final bool isFavorited;
+  final VoidCallback onFavoriteTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DetailTransferScreen(
-              recipientName: contact['name']!,
-              recipientBank: contact['bank']!,
-              recipientAccount: contact['account']!,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
+          ],
+        ),
         child: Row(
           children: [
             // Avatar Lingkaran dengan Inisial
             Container(
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               decoration: const BoxDecoration(
                 color: Color(0xFFFFF3F3),
                 shape: BoxShape.circle,
@@ -790,6 +952,18 @@ class _ContactItem extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            // Ikon Love/Heart
+            GestureDetector(
+              onTap: onFavoriteTap,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(
+                  isFavorited ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorited ? const Color(0xFFCC0000) : Colors.grey,
+                  size: 22,
+                ),
               ),
             ),
           ],

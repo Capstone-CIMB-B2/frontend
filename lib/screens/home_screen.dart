@@ -13,6 +13,95 @@ String formatCurrency(double amount) {
   return 'IDR ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
 }
 
+String formatRpCurrency(double amount) {
+  int val = amount.toInt();
+  String str = val.toString();
+  RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+  return 'Rp ${str.replaceAllMapped(reg, (Match m) => '${m[1]}.')}';
+}
+
+String formatTrxDateTime(String timestamp) {
+  try {
+    final cleanTs = timestamp.replaceAll('T', ' ');
+    final parts = cleanTs.split(' ');
+    final datePart = parts[0];
+    final timePart = parts.length > 1 ? parts[1] : '';
+
+    final dateSplit = datePart.split('-');
+    if (dateSplit.length == 3) {
+      final year = dateSplit[0];
+      final monthNum = dateSplit[1];
+      final day = int.parse(dateSplit[2]).toString();
+
+      const months = {
+        '01': 'Jun', '02': 'Feb', '03': 'Mar', '04': 'Apr',
+        '05': 'Mei', '06': 'Jun', '07': 'Jul', '08': 'Agu',
+        '09': 'Sep', '10': 'Okt', '11': 'Nov', '12': 'Des'
+      };
+      final monthName = months[monthNum] ?? monthNum;
+
+      String formattedTime = '';
+      if (timePart.isNotEmpty) {
+        final timeSplit = timePart.split(':');
+        if (timeSplit.length >= 2) {
+          formattedTime = ', ${timeSplit[0]}:${timeSplit[1]}';
+        }
+      }
+      return '$day $monthName $year$formattedTime';
+    }
+  } catch (_) {}
+  return timestamp;
+}
+
+String getTransactionDisplayTitle(TransactionResponse trx) {
+  final method = trx.transactionMethod.toLowerCase();
+  final cat = trx.category.toLowerCase();
+  if (method == 'qris' || cat == 'qris') {
+    return 'Pembayaran QRIS';
+  } else if (method == 'top up' || method == 'topup' || cat == 'e-wallet' || cat == 'wallet') {
+    return 'Top Up E-Wallet';
+  } else if (method == 'transfer') {
+    return 'Transfer';
+  } else if (method == 'pembelian pulsa') {
+    return 'Pembelian Pulsa';
+  } else if (method == 'bayar tagihan') {
+    return 'Pembayaran Tagihan';
+  }
+  return trx.transactionMethod.isNotEmpty ? trx.transactionMethod : 'Transaksi';
+}
+
+String getTransactionDisplaySubtitle(TransactionResponse trx) {
+  final method = trx.transactionMethod.toLowerCase();
+  final cat = trx.category.toLowerCase();
+  if (method == 'transfer') {
+    final bank = trx.recipientBank ?? 'CIMB NIAGA';
+    final acc = trx.recipientAccount ?? '';
+    return acc.isNotEmpty ? '$bank • $acc' : bank;
+  } else if (method == 'top up' || method == 'topup' || cat == 'e-wallet' || cat == 'wallet') {
+    final merchant = trx.merchantName;
+    final acc = trx.recipientAccount ?? '';
+    return acc.isNotEmpty ? '$merchant - $acc' : merchant;
+  }
+  return trx.merchantName;
+}
+
+IconData getTransactionIcon(TransactionResponse trx) {
+  final method = trx.transactionMethod.toLowerCase();
+  final cat = trx.category.toLowerCase();
+  if (method == 'qris' || cat == 'qris') {
+    return Icons.qr_code_scanner;
+  } else if (method == 'top up' || method == 'topup' || cat == 'e-wallet' || cat == 'wallet') {
+    return Icons.account_balance_wallet;
+  } else if (method == 'transfer') {
+    return Icons.swap_horiz;
+  } else if (method == 'pembelian pulsa') {
+    return Icons.phone_android;
+  } else if (method == 'bayar tagihan') {
+    return Icons.receipt_long;
+  }
+  return Icons.payment;
+}
+
 class OctoHomeScreenLoggedIn extends StatefulWidget {
   const OctoHomeScreenLoggedIn({super.key});
 
@@ -86,7 +175,7 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
 
   Future<void> _loadTransactions() async {
     setState(() => _isLoadingTransactions = true);
-    final trxs = await ApiService.getRecentTransactions(limit: 4);
+    final trxs = await ApiService.getRecentTransactions(limit: 3);
     if (mounted) {
       setState(() {
         if (trxs != null) {
@@ -332,17 +421,19 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                                 isLoggedIn: true,
                               ),
                               const SizedBox(height: 24),
+                              const _NewsSection(),
+                              if (_isLoadingTransactions || _transactions.isNotEmpty) ...[
+                                const SizedBox(height: 24),
+                                _RecentTransactionsSection(
+                                  isLoading: _isLoadingTransactions,
+                                  transactions: _transactions,
+                                ),
+                              ],
+                              const SizedBox(height: 24),
                               _EWalletSection(
                                 balanceVisible: _balanceVisible,
                                 balance: _accountBalance,
                               ),
-                              const SizedBox(height: 24),
-                              _RecentTransactionsSection(
-                                isLoading: _isLoadingTransactions,
-                                transactions: _transactions,
-                              ),
-                              const SizedBox(height: 24),
-                              const _NewsSection(),
                               const SizedBox(height: 100),
                             ],
                           ),
@@ -382,36 +473,86 @@ class _TopBarLoggedIn extends StatelessWidget {
             onTap: () async {
               final confirm = await showDialog<bool>(
                 context: context,
-                builder: (ctx) => AlertDialog(
+                builder: (ctx) => Dialog(
+                  backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  title: const Text(
-                    'Keluar',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  content: const Text(
-                    'Apakah Anda yakin ingin keluar dari aplikasi?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text(
-                        'Batal',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text(
-                        'Keluar',
-                        style: TextStyle(
-                          color: Color(0xFFD90002),
-                          fontWeight: FontWeight.bold,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Keluar',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'Calibri',
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Apakah Anda yakin ingin keluar dari aplikasi?',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                            fontFamily: 'Calibri',
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text(
+                                  'Batal',
+                                  style: TextStyle(
+                                    color: Color(0xFFCC0000),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    fontFamily: 'Calibri',
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => Navigator.pop(ctx, true),
+                                child: Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Text(
+                                    'Keluar',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      fontFamily: 'Calibri',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               );
               if (confirm == true && context.mounted) {
@@ -779,7 +920,12 @@ class _EWalletSection extends StatelessWidget {
         children: [
           const Text(
             'e-Wallet',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontFamily: 'Calibri',
+            ),
           ),
           const SizedBox(height: 12),
           IntrinsicHeight(
@@ -791,8 +937,16 @@ class _EWalletSection extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF4F4F4),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFEFEFEF)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,61 +955,33 @@ class _EWalletSection extends StatelessWidget {
                           children: [
                             SvgPicture.asset(
                               'assets/octo/octopay-logo.svg',
-                              width: 32,
-                              height: 32,
+                              width: 28,
+                              height: 28,
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              'OCTO Pay',
+                              'Octo Pay',
                               style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                size: 20,
-                                color: Color(0xFF7B0000),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                fontFamily: 'Calibri',
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.remove_red_eye_outlined,
-                              size: 18,
-                              color: Colors.black54,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              balanceVisible
-                                  ? formatCurrency(balance)
-                                  : 'IDR •••',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Transaksi lebih praktis untuk kamu di sini.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                            fontFamily: 'Calibri',
+                          ),
                         ),
+                        const Spacer(),
+                        const SizedBox(height: 14),
+                        _buildHubungkanButton(),
                       ],
                     ),
                   ),
@@ -867,13 +993,16 @@ class _EWalletSection extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Color(0xFFFFFFFF), Color(0xFFDDDBDE)],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFEFEFEF)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -882,47 +1011,33 @@ class _EWalletSection extends StatelessWidget {
                           children: [
                             SvgPicture.asset(
                               'assets/gopay-logo.svg',
-                              width: 32,
-                              height: 32,
+                              width: 28,
+                              height: 28,
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              'gopay',
+                              'Gopay',
                               style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                fontFamily: 'Calibri',
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7B0000),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              minimumSize: const Size(0, 28),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 4,
-                              ),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              'Hubungkan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Top up saldo lebih mudah untuk kamu di sini.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                            fontFamily: 'Calibri',
                           ),
                         ),
+                        const Spacer(),
+                        const SizedBox(height: 14),
+                        _buildHubungkanButton(),
                       ],
                     ),
                   ),
@@ -931,6 +1046,36 @@ class _EWalletSection extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHubungkanButton() {
+    return Container(
+      width: double.infinity,
+      height: 38,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(19),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFCC0000).withOpacity(0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'Hubungkan',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          fontFamily: 'Calibri',
+        ),
       ),
     );
   }
@@ -1363,78 +1508,6 @@ class _RecentTransactionsSection extends StatelessWidget {
   final bool isLoading;
   final List<TransactionResponse> transactions;
 
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'food & beverage':
-      case 'f&b':
-        return Icons.restaurant_rounded;
-      case 'e-wallet':
-      case 'wallet':
-        return Icons.account_balance_wallet_rounded;
-      case 'transport & mobility':
-      case 'transport':
-      case 'transportasi':
-        return Icons.directions_car_rounded;
-      case 'utilities':
-      case 'tagihan':
-      case 'utility':
-        return Icons.bolt_rounded;
-      case 'lifestyle & entertainment':
-      case 'lifestyle':
-        return Icons.sports_esports_rounded;
-      default:
-        return Icons.payment_rounded;
-    }
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'food & beverage':
-      case 'f&b':
-        return const Color(0xFFFFECE5); // Soft orange
-      case 'e-wallet':
-      case 'wallet':
-        return const Color(0xFFE5F1FF); // Soft blue
-      case 'transport & mobility':
-      case 'transport':
-      case 'transportasi':
-        return const Color(0xFFE5FFE6); // Soft green
-      case 'utilities':
-      case 'tagihan':
-      case 'utility':
-        return const Color(0xFFFFF9E5); // Soft yellow
-      case 'lifestyle & entertainment':
-      case 'lifestyle':
-        return const Color(0xFFF3E5FF); // Soft purple
-      default:
-        return const Color(0xFFF2F2F2); // Soft grey
-    }
-  }
-
-  Color _getCategoryIconColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'food & beverage':
-      case 'f&b':
-        return const Color(0xFFE05315);
-      case 'e-wallet':
-      case 'wallet':
-        return const Color(0xFF0F75BD);
-      case 'transport & mobility':
-      case 'transport':
-      case 'transportasi':
-        return const Color(0xFF2E8540);
-      case 'utilities':
-      case 'tagihan':
-      case 'utility':
-        return const Color(0xFFBF8F00);
-      case 'lifestyle & entertainment':
-      case 'lifestyle':
-        return const Color(0xFF8B25C6);
-      default:
-        return const Color(0xFF666666);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1443,11 +1516,12 @@ class _RecentTransactionsSection extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
           child: Text(
-            'Aktivitas Anda',
+            'Transaksi Kamu',
             style: TextStyle(
               fontSize: 20,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.bold,
               color: Colors.black,
+              fontFamily: 'Calibri',
             ),
           ),
         ),
@@ -1501,9 +1575,10 @@ class _RecentTransactionsSection extends StatelessWidget {
               Text(
                 'Belum ada transaksi terakhir',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: Colors.grey[500],
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
+                  fontFamily: 'Calibri',
                 ),
               ),
             ],
@@ -1512,7 +1587,7 @@ class _RecentTransactionsSection extends StatelessWidget {
       );
     }
 
-    final displayTransactions = transactions.take(4).toList();
+    final displayTransactions = transactions.take(3).toList();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1525,22 +1600,23 @@ class _RecentTransactionsSection extends StatelessWidget {
               const Divider(color: Color(0xFFF5F5F5), height: 24, thickness: 1),
           itemBuilder: (context, index) {
             final trx = displayTransactions[index];
-            final cat = trx.category;
-            final icon = _getCategoryIcon(cat);
-            final bgColor = _getCategoryColor(cat);
-            final iconColor = _getCategoryIconColor(cat);
-
-            final displayDate = trx.timestamp.length >= 10
-                ? trx.timestamp.substring(0, 10)
-                : trx.timestamp;
+            final displayTitle = getTransactionDisplayTitle(trx);
+            final displaySubtitle = getTransactionDisplaySubtitle(trx);
 
             return Row(
               children: [
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
-                  child: Center(child: Icon(icon, color: iconColor, size: 22)),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEEEEEE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    getTransactionIcon(trx),
+                    color: const Color(0xFFCC0000),
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1548,31 +1624,62 @@ class _RecentTransactionsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        trx.merchantName,
+                        displayTitle,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Colors.black87,
+                          color: Colors.black,
+                          fontFamily: 'Calibri',
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
-                        '$cat • $displayDate',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        displaySubtitle,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 13,
+                          fontFamily: 'Calibri',
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        formatTrxDateTime(trx.timestamp),
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                          fontFamily: 'Calibri',
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  '- ${formatCurrency(trx.amount)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF7B0000),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '-${formatRpCurrency(trx.amount)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.black,
+                        fontFamily: 'Calibri',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Berhasil',
+                      style: TextStyle(
+                        color: Color(0xFF2E8540),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        fontFamily: 'Calibri',
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );
@@ -1594,18 +1701,18 @@ class _RecentTransactionsSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Lihat Riwayat Transaksi',
+                  'Transaksi Lainnya',
                   style: TextStyle(
-                    color: Color(0xFF7B0000),
+                    color: Color(0xFFCC0000),
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 15,
                     fontFamily: 'Calibri',
                   ),
                 ),
                 SizedBox(width: 4),
                 Icon(
                   Icons.chevron_right,
-                  color: Color(0xFF7B0000),
+                  color: Color(0xFFCC0000),
                   size: 18,
                 ),
               ],

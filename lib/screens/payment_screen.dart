@@ -36,10 +36,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   // Pulsa preset amounts
   final List<double> _pulsaPresets = [
-    15000, 25000, 30000, 40000, 50000, 75000, 100000, 150000,
+    15000,
+    25000,
+    30000,
+    40000,
+    50000,
+    75000,
+    100000,
+    150000,
   ];
-
-
 
   bool get _isPulsa => widget.transactionMethod == 'Pembelian Pulsa';
   bool get _isTopUp => widget.transactionMethod == 'Top Up';
@@ -120,20 +125,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return widget.merchantName
         .trim()
         .split(RegExp(r'\s+'))
-        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .map(
+          (w) => w.isEmpty
+              ? ''
+              : w[0].toUpperCase() + w.substring(1).toLowerCase(),
+        )
         .join();
   }
 
   /// Merchant yang punya asset SVG.
   static const _svgMerchants = {
-    'Biznet', 'Dana', 'Gopay', 'Indihome', 'Indosat',
-    'Netflix', 'Pln', 'Shopeepay', 'Spotify', 'Telkomsel', 'Xl',
+    'Biznet',
+    'Dana',
+    'Gopay',
+    'Indihome',
+    'Indosat',
+    'Netflix',
+    'Pln',
+    'Shopeepay',
+    'Spotify',
+    'Telkomsel',
+    'Xl',
   };
 
   /// Merchant yang punya asset PNG.
-  static const _pngMerchants = {
-    'Ovo', 'Telkom', 'Youtube', 'Pdam'
-  };
+  static const _pngMerchants = {'Ovo', 'Telkom', 'Youtube', 'Pdam'};
 
   /// Tipe asset: 'svg', 'png', atau null jika tidak ada.
   String? get _merchantAssetType {
@@ -157,7 +173,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _onSubmit() {
-    final double amtVal = double.tryParse(
+    final double amtVal =
+        double.tryParse(
           _amountController.text.replaceAll(RegExp(r'[^0-9]'), ''),
         ) ??
         0.0;
@@ -188,8 +205,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget get _fallbackIcon => Center(
-        child: Icon(_merchantIcon, color: const Color(0xFF8C0E1A), size: 26),
-      );
+    child: Icon(_merchantIcon, color: const Color(0xFF8C0E1A), size: 26),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -313,22 +330,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   child: ClipOval(
                                     child: _merchantAssetPath != null
                                         ? (_merchantAssetType == 'svg'
-                                            ? SvgPicture.asset(
-                                                _merchantAssetPath!,
-                                                width: 48,
-                                                height: 48,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (_, __, ___) =>
-                                                    _fallbackIcon,
-                                              )
-                                            : Image.asset(
-                                                _merchantAssetPath!,
-                                                width: 48,
-                                                height: 48,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (_, __, ___) =>
-                                                    _fallbackIcon,
-                                              ))
+                                              ? SvgPicture.asset(
+                                                  _merchantAssetPath!,
+                                                  width: 48,
+                                                  height: 48,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      _fallbackIcon,
+                                                )
+                                              : Image.asset(
+                                                  _merchantAssetPath!,
+                                                  width: 48,
+                                                  height: 48,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      _fallbackIcon,
+                                                ))
                                         : _fallbackIcon,
                                   ),
                                 ),
@@ -409,7 +426,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           if (_isPulsa) ...[
                             _buildPulsaGrid(),
                           ]
-
                           // Top Up & Tagihan: input teks bebas + chip preset (Top Up saja)
                           else ...[
                             Row(
@@ -587,10 +603,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     const Color(0xFFCC0000),
                                     const Color(0xFF8C0E1A),
                                   ]
-                                : [
-                                    Colors.grey.shade400,
-                                    Colors.grey.shade500,
-                                  ],
+                                : [Color(0xFFE2E2E6), Color(0xFFE2E2E6)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
@@ -601,6 +614,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             disabledBackgroundColor: Colors.transparent,
+                            disabledForegroundColor: Colors.white,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
@@ -644,8 +658,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           onTap: () {
             setState(() {
               _selectedPresetIndex = index;
-              _amountController.text =
-                  _pulsaPresets[index].toInt().toString();
+              _amountController.text = _pulsaPresets[index].toInt().toString();
             });
           },
           child: Container(
@@ -667,9 +680,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: isSelected
-                    ? const Color(0xFF8C0E1A)
-                    : Colors.black87,
+                color: isSelected ? const Color(0xFF8C0E1A) : Colors.black87,
               ),
             ),
           ),

@@ -387,6 +387,25 @@ class ApiService {
     }
   }
 
+  // 6d. Delete Saved Contact
+  static Future<bool> deleteSavedContact(int contactId) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/v1/saved-contacts/$contactId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   static int? _sessionId;
   static int get sessionId {
     _sessionId ??= 100000 + DateTime.now().millisecond + (DateTime.now().microsecond % 900000);

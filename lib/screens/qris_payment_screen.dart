@@ -131,18 +131,24 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                         children: [
                             // ── MERCHANT INFO ──────────────────────────────
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3F3),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0xFFF5E1E1)),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFE2E2E6),
+                                width: 1.2,
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(9),
                                   decoration: const BoxDecoration(
-                                    color: Colors.white,
+                                    color: Color(0xFFF3F3F3),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -151,7 +157,7 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                     size: 30,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,57 +184,7 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                               ],
                             ),
                           ),
-                          // ── MERCHANT INFO ──────────────────────────────
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 65,
-                                  height: 65,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF3F3F3),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      _getInitials(widget.merchantName),
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF8C0E1A),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        widget.merchantName.toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'QRIS • ${widget.category}',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
+                        
                           const SizedBox(height: 32),
 
                           // ── NOMINAL ────────────────────────────────────

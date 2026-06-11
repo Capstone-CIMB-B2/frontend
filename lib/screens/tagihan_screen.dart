@@ -322,17 +322,166 @@ class _TagihanScreenState extends State<TagihanScreen> {
     }
   }
 
+  bool _isFavorite(Map<String, String> item) {
+    return _savedFavorites.any((fav) => fav['number'] == item['number']);
+  }
+
+  String? _getSavedId(Map<String, String> item) {
+    try {
+      return _savedFavorites.firstWhere((fav) => fav['number'] == item['number'])['id'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _handleFavoriteTap(Map<String, String> item) async {
+    final isFav = _isFavorite(item);
+    if (isFav) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Hapus Favorit',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'Calibri',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Apakah Anda yakin ingin menghapus transaksi ini dari daftar favorit?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontFamily: 'Calibri',
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text(
+                          'Kembali',
+                          style: TextStyle(
+                            color: Color(0xFFCC0000),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            fontFamily: 'Calibri',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx, true),
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Hapus',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              fontFamily: 'Calibri',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (confirm == true) {
+        final savedId = _getSavedId(item);
+        if (savedId != null) {
+          final success = await ApiService.deleteSavedContact(int.parse(savedId));
+          if (success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kontak berhasil dihapus dari favorit'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            _fetchSavedFavorites();
+            _fetchRecentFavorites();
+          }
+        }
+      }
+    } else {
+      // Add to favorites
+      final res = await ApiService.addSavedContact(
+        name: item['name']!,
+        accountNumber: item['number']!,
+        bankName: item['type']!,
+        category: 'TopUp',
+      );
+      if (res != null && res['success'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item['name']} disimpan ke favorit!'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        _fetchSavedFavorites();
+        _fetchRecentFavorites();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res?['message'] ?? 'Gagal menyimpan kontak'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _fetchRecentFavorites() async {
     try {
       final trxs = await ApiService.getRecentTransactions(
-        limit: 10,
-        excludeMethod: 'Transfer',
+        limit: 50,
       );
       if (trxs != null && mounted) {
         setState(() {
           final seen = <String>{};
           final list = <Map<String, String>>[];
-          for (var trx in trxs) {
+          // Filter out Transfer and QRIS (case-insensitive check)
+          final filtered = trxs.where((t) {
+            final m = t.transactionMethod.toLowerCase();
+            return m != 'transfer' && m != 'qris';
+          }).toList();
+
+          for (var trx in filtered) {
             final numVal = trx.recipientAccount ?? '';
             final type = trx.merchantName;
             final key = '$numVal|$type';
@@ -677,8 +826,8 @@ class _TagihanScreenState extends State<TagihanScreen> {
             child: Row(
               children: [
                 SizedBox(
-                  width: 44,
-                  height: 34,
+                  width: 40,
+                  height: 30,
                   child: logo.endsWith('.svg')
                       ? SvgPicture.asset(
                           logo,
@@ -922,7 +1071,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
                                   },
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 18),
                               _GridPageIndicator(
                                 pageCount: pageCount,
                                 currentPage: _currentPageGrid,
@@ -1258,49 +1407,17 @@ class _TagihanScreenState extends State<TagihanScreen> {
           ),
 
           // Ikon aksi
-          if (isRecent)
-            GestureDetector(
-              onTap: () async {
-                final res = await ApiService.addSavedContact(
-                  name: item['name']!,
-                  accountNumber: item['number']!,
-                  bankName: item['type']!,
-                  category: 'TopUp',
-                );
-                if (!mounted) return;
-                if (res != null && res['success'] == true) {
-                  _fetchSavedFavorites();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${item['name']} disimpan ke favorit!'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        res?['message'] ?? 'Gagal menyimpan kontak',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              child: const Padding(
-                padding: EdgeInsets.only(left: 8),
-                child: Icon(
-                  Icons.person_add_alt_1_outlined,
-                  color: Color(0xFF8C0E1A),
-                  size: 22,
-                ),
+          GestureDetector(
+            onTap: () => _handleFavoriteTap(item),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Icon(
+                _isFavorite(item) ? Icons.favorite : Icons.favorite_border,
+                color: _isFavorite(item) ? const Color(0xFFCC0000) : Colors.grey,
+                size: 22,
               ),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Icon(Icons.chevron_right, color: Colors.grey, size: 22),
             ),
+          ),
         ],
       ),
     );
