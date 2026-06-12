@@ -238,6 +238,7 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
       barrierDismissible: false,
       builder: (ctx) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -254,7 +255,11 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                 const SizedBox(height: 16),
                 const Text(
                   'Personalisasi Pengalaman Anda',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),

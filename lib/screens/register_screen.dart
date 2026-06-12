@@ -333,6 +333,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF8C0E1A),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogBackgroundColor: Colors.white,
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF8C0E1A),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) setState(() => _selectedDate = picked);
   }
@@ -829,6 +848,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<Pekerjaan>(
+              dropdownColor: Colors.white,
               initialValue: _selectedPekerjaan,
               hint: const Text(
                 'Masukkan Pekerjaan',
@@ -839,6 +859,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 color: Color(0xFF7B0000),
               ),
               decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 16,
@@ -1065,7 +1087,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ],
 
-        const SizedBox(height: 60),
+        const SizedBox(height: 45),
 
         // Keypad
         Padding(
@@ -1082,7 +1104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildKeypadButton('3'),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1093,7 +1115,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildKeypadButton('6'),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1104,7 +1126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildKeypadButton('9'),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -46,61 +46,118 @@ class _RekeningLainScreenState extends State<RekeningLainScreen> {
   void _showBankSelectionSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
       ),
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.70,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9D9D9),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Text(
-                  'Pilih Bank Tujuan',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Calibri',
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Center(
+                  child: Text(
+                    'Pilih Bank Tujuan',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'Calibri',
+                    ),
                   ),
                 ),
               ),
-              const Divider(color: Color(0xFFEFEFEF), thickness: 1),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFEFEFEF)),
               Flexible(
-                child: ListView.builder(
+                child: ListView.separated(
                   shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                   itemCount: _bankOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final bank = _bankOptions[index];
                     final isSelected = bank == _selectedBank;
-                    return ListTile(
-                      title: Text(
-                        bank,
-                        style: TextStyle(
-                          fontFamily: 'Calibri',
-                          fontSize: 16,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? const Color(0xFF8C0E1A)
-                              : Colors.black87,
-                        ),
-                      ),
-                      trailing: isSelected
-                          ? const Icon(Icons.check, color: Color(0xFF8C0E1A))
-                          : null,
+                    return GestureDetector(
                       onTap: () {
                         setState(() {
                           _selectedBank = bank;
                         });
                         Navigator.pop(context);
                       },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF8C0E1A)
+                                : const Color(0xFFE2E2E6),
+                            width: isSelected ? 1.5 : 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF3F3F3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.account_balance_rounded,
+                                size: 18,
+                                color: Color(0xFF8C0E1A),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                bank,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  color: Colors.black87,
+                                  fontFamily: 'Calibri',
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check,
+                                color: Color(0xFF8C0E1A),
+                                size: 22,
+                              )
+                            else
+                              Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey[400],
+                                size: 22,
+                              ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),

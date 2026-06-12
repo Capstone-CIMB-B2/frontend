@@ -382,8 +382,10 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(30),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
+                          gradient: LinearGradient(
+                            colors: _isButtonEnabled
+                                ? [Color(0xFFCC0000), Color(0xFF8C0E1A)]
+                                : [Color(0xFFE2E2E6), Color(0xFFE2E2E6)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
@@ -418,6 +420,7 @@ class _DetailTransferScreenState extends State<DetailTransferScreen> {
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             disabledBackgroundColor: Colors.transparent,
+                            disabledForegroundColor: Colors.white,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),

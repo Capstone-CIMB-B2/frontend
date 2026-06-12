@@ -129,7 +129,7 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                            // ── MERCHANT INFO ──────────────────────────────
+                          // ── MERCHANT INFO ──────────────────────────────
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -160,7 +160,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         widget.merchantName.toUpperCase(),
@@ -184,7 +185,7 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                               ],
                             ),
                           ),
-                        
+
                           const SizedBox(height: 32),
 
                           // ── NOMINAL ────────────────────────────────────

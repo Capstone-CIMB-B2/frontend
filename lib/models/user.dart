@@ -4,10 +4,13 @@ class UserModel {
   final String phoneNumber;
   final String nik;
   final String dob;
+  final String birthPlace;
+  final String emailAddress;
   final String occupation;
   final String address;
   final String city;
   final String province;
+  final double monthlyIncome;
   final bool consentPersonalization;
 
   const UserModel({
@@ -16,10 +19,13 @@ class UserModel {
     required this.phoneNumber,
     required this.nik,
     required this.dob,
+    required this.birthPlace,
+    required this.emailAddress,
     required this.occupation,
     required this.address,
     required this.city,
     required this.province,
+    required this.monthlyIncome,
     required this.consentPersonalization,
   });
 
@@ -29,12 +35,15 @@ class UserModel {
       username: json['username'] as String? ?? '',
       fullName: json['full_name'] as String? ?? '',
       phoneNumber: json['phone_number'] as String? ?? '',
-      nik: json['nik'] as String? ?? '',
-      dob: json['dob'] as String? ?? '',
+      nik: json['nik'] as String? ?? json['national_id'] as String? ?? '',
+      dob: json['dob'] as String? ?? json['birth_date'] as String? ?? '',
+      birthPlace: json['birth_place'] as String? ?? '',
+      emailAddress: json['email_address'] as String? ?? '',
       occupation: json['occupation'] as String? ?? '',
-      address: json['address'] as String? ?? '',
+      address: json['address'] as String? ?? json['street_address'] as String? ?? '',
       city: json['city'] as String? ?? '',
       province: json['province'] as String? ?? '',
+      monthlyIncome: (json['monthly_income'] as num?)?.toDouble() ?? 0.0,
       consentPersonalization: json['consent_personalization'] as bool? ?? false,
     );
   }
@@ -46,10 +55,13 @@ class UserModel {
       'phone_number': phoneNumber,
       'nik': nik,
       'dob': dob,
+      'birth_place': birthPlace,
+      'email_address': emailAddress,
       'occupation': occupation,
       'address': address,
       'city': city,
       'province': province,
+      'monthly_income': monthlyIncome,
       'consent_personalization': consentPersonalization,
     };
   }
@@ -61,10 +73,13 @@ class UserModel {
     String? phoneNumber,
     String? nik,
     String? dob,
+    String? birthPlace,
+    String? emailAddress,
     String? occupation,
     String? address,
     String? city,
     String? province,
+    double? monthlyIncome,
     bool? consentPersonalization,
   }) {
     return UserModel(
@@ -73,10 +88,13 @@ class UserModel {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       nik: nik ?? this.nik,
       dob: dob ?? this.dob,
+      birthPlace: birthPlace ?? this.birthPlace,
+      emailAddress: emailAddress ?? this.emailAddress,
       occupation: occupation ?? this.occupation,
       address: address ?? this.address,
       city: city ?? this.city,
       province: province ?? this.province,
+      monthlyIncome: monthlyIncome ?? this.monthlyIncome,
       consentPersonalization:
           consentPersonalization ?? this.consentPersonalization,
     );

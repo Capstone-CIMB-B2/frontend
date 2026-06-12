@@ -798,6 +798,56 @@ class _ContactList extends StatelessWidget {
   List<Map<String, String>> get _activeList =>
       isSavedActive ? savedContacts : recentContacts;
 
+  Widget _buildEmptyState({required bool isTabSaved}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF0F0F2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Image.asset('assets/octo/octo-profile.png', width: 90, height: 90),
+          const SizedBox(height: 16),
+          Text(
+            isTabSaved
+                ? 'Belum Ada Transfer Favorit'
+                : 'Belum Ada Riwayat Transfer',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontFamily: 'Calibri',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isTabSaved
+                ? 'Simpan tujuan transfer favorit Anda agar transaksi berikutnya menjadi lebih cepat dan mudah.'
+                : 'Riwayat transfer yang pernah Anda lakukan akan muncul di sini.',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+              fontFamily: 'Calibri',
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final contacts = _activeList;
@@ -838,19 +888,7 @@ class _ContactList extends StatelessWidget {
 
         // Daftar kontak
         if (contacts.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
-            child: Center(
-              child: Text(
-                'Tidak ada penerima ditemukan',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 15,
-                  fontFamily: 'Calibri',
-                ),
-              ),
-            ),
-          )
+          _buildEmptyState(isTabSaved: isSavedActive)
         else
           ListView.separated(
             shrinkWrap: true,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'login_screen.dart';
 import 'personalisasi_screen.dart';
+import 'profile_screen.dart';
 import '../services/api_service.dart';
 import '../services/auth_manager.dart';
 import '../models/user.dart';
@@ -38,9 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.isLoggedIn) {
-      _fetchProfile();
-    }
+    _fetchProfile();
   }
 
   Future<void> _fetchProfile() async {
@@ -51,7 +50,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _user = UserModel.fromJson(data));
       }
     } catch (_) {
-      // Gagal fetch, tetap tampil loading selesai
     } finally {
       if (mounted) setState(() => _isLoadingProfile = false);
     }
@@ -180,25 +178,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
 
                 // Profile section
-                widget.isLoggedIn
-                    ? _ProfileLoggedIn(
-                        user: _user,
-                        isLoading: _isLoadingProfile,
-                      )
-                    : _ProfileGuest(
-                        onLoginTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const LoginScreen()),
-                          );
-                        },
-                      ),
+                _ProfileLoggedIn(
+                  user: _user,
+                  isLoading: _isLoadingProfile,
+                ),
 
                 _SectionBlock(
                   iconPath: 'assets/icons/InformasiPribadi.svg',
                   label: 'Informasi Pribadi',
-                  visible: widget.isLoggedIn,
+                  visible: true,
                   items: [
                     _MenuItemData(
                       title: 'User ID & PIN OCTO',
@@ -209,12 +197,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: 'Profil',
                       subtitle:
                           'Kelola KTP, nomor telepon, email, alamat, pendidikan, dan informasi pekerjaan.',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProfileScreen(
+                              user: _user,
+                              onProfileUpdated: _fetchProfile,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     _MenuItemData(
                       title: 'Personalisasi',
                       subtitle:
-                          'Atur bagaimana kami menyesuaikan fitur dan promo berdasarkan kebutuhan Anda.',
+                          'Atur bagaimana kami menyesuaikan fitur and promo berdasarkan kebutuhan Anda.',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -230,7 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SectionBlock(
                   iconPath: 'assets/icons/InformasiPribadi.svg',
                   label: 'Rekening & Transaksi',
-                  visible: widget.isLoggedIn,
+                  visible: true,
                   items: [
                     _MenuItemData(
                       title: 'Rekening Utama',
@@ -272,7 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SectionBlock(
                   iconPath: 'assets/icons/InformasiPribadi.svg',
                   label: 'Notifikasi Aplikasi OCTO',
-                  visible: widget.isLoggedIn,
+                  visible: true,
                   items: [
                     _MenuItemData(
                       title: 'Kelola Notifikasi',
@@ -312,13 +310,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
 
-                if (widget.isLoggedIn) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: _LogoutButton(onTap: _handleLogout),
-                  ),
-                ],
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _LogoutButton(onTap: _handleLogout),
+                ),
 
                 const SizedBox(height: 120),
               ],
@@ -468,73 +464,7 @@ class _ProfileLoggedIn extends StatelessWidget {
   }
 }
 
-// PROFIL (BELUM LOGIN)
-// ─────────────────────────────────────────────
-class _ProfileGuest extends StatelessWidget {
-  final VoidCallback onLoginTap;
-  const _ProfileGuest({required this.onLoginTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 85,
-          height: 85,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: Image.asset('assets/octo/octo-profile.png',
-                fit: BoxFit.cover),
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        GestureDetector(
-          onTap: onLoginTap,
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD90002), Color(0xFF9A0101)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFCC0000).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Text(
-              'Daftar atau Login',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-}
+// Deleted _ProfileGuest as settings always shows logged in
 
 class _MenuItemData {
   final String title;
@@ -570,7 +500,7 @@ class _SectionBlock extends StatelessWidget {
     if (!visible) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(top: 28, left: 24, right: 24),
+      padding: const EdgeInsets.only(top: 28, left: 20, right: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -114,6 +114,25 @@ class ApiService {
     return response.statusCode == 200;
   }
 
+  static Future<bool> updateProfile(Map<String, dynamic> profileData) async {
+    final token = await AuthManager.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(profileData),
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<Map<String, dynamic>?> transfer({
     required String recipientName,
     required String recipientBank,
