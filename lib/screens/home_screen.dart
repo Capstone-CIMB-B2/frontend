@@ -1190,7 +1190,7 @@ class _MenuGrid extends StatelessWidget {
       },
       {'label': 'Verify With\nOCTO', 'icon': 'assets/icons/VerifyWithOcto.svg'},
       {'label': 'Jadwal Saya', 'icon': 'assets/icons/JadwalSaya.svg'},
-      {'label': 'Investasi', 'icon': 'assets/icons/investasi.svg'},
+      {'label': 'Investasi', 'icon': 'assets/icons/Investasi.svg'},
       {'label': 'Kode Promo', 'icon': 'assets/icons/KodePromo.svg'},
       {
         'label': 'Tabungan &\nDeposito',
