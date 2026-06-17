@@ -124,7 +124,7 @@ class _OctoHomeScreenLoggedInState extends State<OctoHomeScreenLoggedIn> {
     _pages = [
       const _HomeContentLoggedIn(),
       const MyAccountScreen(),
-      InvestasiScreen(onBack: () => changeTab(0)),
+      const Center(child: Text('Halaman Wealth')),
       const SettingsScreen(isLoggedIn: true),
     ];
   }

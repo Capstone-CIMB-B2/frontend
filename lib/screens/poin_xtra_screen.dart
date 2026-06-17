@@ -112,10 +112,15 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                             children: [
                               // Total Poin Anda Card
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                                padding: const EdgeInsets.fromLTRB(
+                                  18,
+                                  10,
+                                  18,
+                                  0,
+                                ),
                                 child: _buildPoinCard(
                                   child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
+                                    padding: const EdgeInsets.all(20.0),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -126,24 +131,31 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
-                                                children: const [
-                                                  Text(
+                                                children: [
+                                                  const Text(
                                                     'Total Poin Anda',
                                                     style: TextStyle(
-                                                      fontSize: 12,
+                                                      fontSize: 13,
                                                       color: Colors.grey,
                                                       fontFamily: 'Calibri',
                                                     ),
                                                   ),
-                                                  SizedBox(height: 4),
-                                                  Text(
-                                                    '0 Points',
-                                                    style: TextStyle(
-                                                      fontSize: 24,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.black,
-                                                      fontFamily: 'Calibri',
+                                                  const SizedBox(height: 4),
+                                                  RichText(
+                                                    text: const TextSpan(
+                                                      children: [
+                                                        TextSpan(
+                                                          text: '0 Points',
+                                                          style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontSize: 24,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontFamily:
+                                                                'Calibri',
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
                                                 ],
@@ -160,15 +172,14 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                                   Container(
                                                     width: 42,
                                                     height: 42,
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                        0xFFFFEBEE,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: Color(
+                                                            0xFFFFEBEE,
                                                           ),
-                                                    ),
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
                                                     child: const Icon(
                                                       Icons.card_giftcard,
                                                       color: Color(0xFFD90002),
@@ -242,7 +253,7 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                             Text(
                                               'Poin didapat bulan ini',
                                               style: TextStyle(
-                                                fontSize: 13,
+                                                fontSize: 15,
                                                 color: Colors.grey,
                                                 fontFamily: 'Calibri',
                                               ),
@@ -251,7 +262,7 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                             Text(
                                               '0 Points',
                                               style: TextStyle(
-                                                fontSize: 13,
+                                                fontSize: 15,
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.black,
                                                 fontFamily: 'Calibri',
@@ -283,7 +294,7 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                     const Text(
                                       'Menu Utama',
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.black,
                                         fontFamily: 'Calibri',
@@ -294,16 +305,18 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                     // Horizontal Menu Row (3 Items)
                                     Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.spaceEvenly,
+                                          MainAxisAlignment.start,
                                       children: [
                                         _buildMenuButton(
                                           label: 'Transfer\nPoin Xtra',
                                           icon: 'assets/icons/Transfer.svg',
                                         ),
+                                        const SizedBox(width: 12),
                                         _buildMenuButton(
                                           label: 'Tagihan &\nIsi Ulang',
                                           icon: 'assets/icons/Tagihan.svg',
                                         ),
+                                        const SizedBox(width: 12),
                                         _buildMenuButton(
                                           label: 'Penukaran\nLainnya',
                                           icon: 'assets/icons/Voucher.svg',
@@ -314,11 +327,11 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
 
                                     // Segment / Tab Buttons (Terbaru & Riwayat)
                                     Container(
-                                      height: 56,
+                                      height: 46,
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFF1F1F3),
-                                        borderRadius: BorderRadius.circular(28),
+                                        borderRadius: BorderRadius.circular(23),
                                       ),
                                       child: Row(
                                         children: [
@@ -342,40 +355,60 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
                                     const SizedBox(height: 16),
 
                                     // Transaction / Empty State Content Card
-                                    _buildPoinCard(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 40,
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 32,
+                                        horizontal: 20,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: const Color(0xFFF0F0F2),
                                         ),
-                                        child: Column(
-                                          children: [
-                                            const Icon(
-                                              Icons.folder_open_outlined,
-                                              size: 120,
-                                              color: Color(0xFFE5E5E5),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.03),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Image.asset(
+                                            'assets/icons/Kosong.png',
+                                            width: 130,
+                                            height: 130,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            _selectedTab == 0
+                                                ? 'Belum ada aktivitas'
+                                                : 'Belum ada transaksi',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                              fontFamily: 'Calibri',
                                             ),
-                                            const SizedBox(height: 24),
-                                            const Text(
-                                              'Belum ada transaksi',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black,
-                                              ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _selectedTab == 0
+                                                ? 'Aktivitas terbaru Anda akan muncul di sini.'
+                                                : 'Kumpulkan poin dan lakukan transaksi\nuntuk melihat riwayat di sini.',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.black54,
+                                              fontFamily: 'Calibri',
+                                              height: 1.5,
                                             ),
-                                            const SizedBox(height: 12),
-                                            const Text(
-                                              'Kumpulkan poin dan lakukan transaksi\nuntuk melihat riwayat disini.',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey,
-                                                height: 1.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -400,19 +433,27 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
     return GestureDetector(
       onTap: () {},
       child: SizedBox(
-        width: 90,
+        width: 76,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SvgPicture.asset(icon, width: 50, height: 50),
-            const SizedBox(height: 12),
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: SvgPicture.asset(icon, width: 42, height: 42),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
+              maxLines: 2,
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF3C3C3C),
-                height: 1.3,
+                color: Colors.black87,
+                height: 1.2,
+                fontFamily: 'Calibri',
               ),
             ),
           ],
@@ -429,15 +470,15 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             gradient: isActive
                 ? const LinearGradient(
-                    colors: [Color(0xFFD90002), Color(0xFFAE0016)],
+                    colors: [Color(0xFFCC0000), Color(0xFF8C0E1A)],
                   )
                 : null,
+            color: isActive ? null : const Color(0xFFF3F3F3),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -445,7 +486,8 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
             style: TextStyle(
               color: isActive ? Colors.white : Colors.black87,
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 15,
+              fontFamily: 'Calibri',
             ),
           ),
         ),
@@ -458,7 +500,7 @@ class _PoinXtraScreenState extends State<PoinXtraScreen> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),

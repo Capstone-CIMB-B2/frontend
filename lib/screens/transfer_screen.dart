@@ -816,7 +816,7 @@ class _ContactList extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Image.asset('assets/octo/octo-profile.png', width: 90, height: 90),
+          Image.asset('assets/icons/Kosong.png', width: 130, height: 130),
           const SizedBox(height: 16),
           Text(
             isTabSaved

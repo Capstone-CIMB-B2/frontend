@@ -36,6 +36,7 @@ flutter:
     - assets/logo/
     - assets/banner/promosi/
     - assets/banner/berita/
+    - assets/banner/
     - assets/background/
     - assets/octo/
 

@@ -254,9 +254,9 @@ class _InvestasiScreenState extends State<InvestasiScreen> {
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
                                         child: Image.asset(
-                                          'assets/banner/berita/adsocto.png',
+                                          'assets/banner/getwealthsoon.jpg',
                                           fit: BoxFit.cover,
-                                          height: 150,
+                                          height: 135,
                                           width: double.infinity,
                                         ),
                                       ),
@@ -282,7 +282,7 @@ class _InvestasiScreenState extends State<InvestasiScreen> {
                                         fontFamily: 'Calibri',
                                       ),
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 12),
 
                                     // 2x2 Grid of Product Cards
                                     Column(
@@ -543,7 +543,7 @@ class _InvestasiScreenState extends State<InvestasiScreen> {
     required String icon,
   }) {
     return Container(
-      height: 105,
+      height: 100,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -563,17 +563,16 @@ class _InvestasiScreenState extends State<InvestasiScreen> {
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                SvgPicture.asset(icon, width: 25, height: 30),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
+                Row(
+                  children: [
+                    SvgPicture.asset(icon, width: 22, height: 26),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
                         title,
                         style: const TextStyle(
                           fontSize: 15,
@@ -582,8 +581,14 @@ class _InvestasiScreenState extends State<InvestasiScreen> {
                           fontFamily: 'Calibri',
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
+                    ),
+                  ],
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
                         desc,
                         style: const TextStyle(
                           fontSize: 12,
@@ -594,10 +599,11 @@ class _InvestasiScreenState extends State<InvestasiScreen> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right, color: Colors.grey, size: 16),
+                  ],
                 ),
-                const Icon(Icons.chevron_right, color: Colors.grey, size: 16),
               ],
             ),
           ),

@@ -216,12 +216,12 @@ class _TagihanScreenState extends State<TagihanScreen> {
       iconPath: 'assets/icons/tagihan/PGN.svg',
       keywords: ['pgn', 'gas', 'pertamina'],
     ),
-    const _ServiceItem(
-      label: 'Tiket',
-      category: 'lainnya',
-      iconPath: 'assets/icons/tagihan/Tiket.svg',
-      keywords: ['tiket', 'ticket', 'kereta', 'pesawat', 'konser'],
-    ),
+    // const _ServiceItem(
+    //   label: 'Tiket',
+    //   category: 'lainnya',
+    //   iconPath: 'assets/icons/tagihan/Tiket.svg',
+    //   keywords: ['tiket', 'ticket', 'kereta', 'pesawat', 'konser'],
+    // ),
   ];
 
   List<Map<String, String>> _savedFavorites = [];
@@ -1314,7 +1314,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
       ),
       child: Column(
         children: [
-          Image.asset('assets/octo/octo-profile.png', width: 90, height: 90),
+          Image.asset('assets/icons/Kosong.png', width: 130, height: 130),
           const SizedBox(height: 16),
           Text(
             isTabSaved
