@@ -9,7 +9,6 @@ import '../services/api_service.dart';
 import '../models/transaction_response.dart';
 import 'riwayat_transaksi_screen.dart';
 import 'my_account_screen.dart';
-import 'investasi_screen.dart';
 
 String formatCurrency(double amount) {
   return 'IDR ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
