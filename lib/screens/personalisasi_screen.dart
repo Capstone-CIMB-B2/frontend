@@ -15,6 +15,7 @@ class PersonalisasiScreen extends StatefulWidget {
 class _PersonalisasiScreenState extends State<PersonalisasiScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _consentValue = false;
 
   @override
   void initState() {
@@ -25,9 +26,10 @@ class _PersonalisasiScreenState extends State<PersonalisasiScreen> {
   Future<void> _loadConsent() async {
     final profile = await ApiService.getProfile();
     if (profile != null && mounted) {
+      final consent = profile['consent_personalization'] ?? false;
+      isPersonalizationEnabledNotifier.value = consent;
       setState(() {
-        isPersonalizationEnabledNotifier.value =
-            profile['consent_personalization'] ?? false;
+        _consentValue = consent;
         _isLoading = false;
       });
     } else {
@@ -37,7 +39,7 @@ class _PersonalisasiScreenState extends State<PersonalisasiScreen> {
 
   Future<void> _onToggle(bool val) async {
     setState(() {
-      isPersonalizationEnabledNotifier.value = val;
+      _consentValue = val;
       _isSaving = true;
     });
 
@@ -45,9 +47,11 @@ class _PersonalisasiScreenState extends State<PersonalisasiScreen> {
 
     if (mounted) {
       setState(() => _isSaving = false);
-      if (!success) {
+      if (success) {
+        isPersonalizationEnabledNotifier.value = val;
+      } else {
         // Rollback kalau gagal
-        setState(() => isPersonalizationEnabledNotifier.value = !val);
+        setState(() => _consentValue = !val);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Gagal menyimpan perubahan, coba lagi')),
         );
@@ -138,7 +142,7 @@ class _PersonalisasiScreenState extends State<PersonalisasiScreen> {
                   ),
                 )
               : Switch(
-                  value: isPersonalizationEnabledNotifier.value,
+                  value: _consentValue,
                   onChanged: _onToggle,
                   activeThumbColor: Colors.white,
                   activeTrackColor: const Color(0xFFD90002),

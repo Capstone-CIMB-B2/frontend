@@ -57,8 +57,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
     if (stackBox == null) return;
     final stackPos = stackBox.localToGlobal(Offset.zero);
     // top cutout = posisi dashed line - posisi stack + margin card (35) - setengah circle (10)
-    final computed = pos.dy - stackPos.dy - 35 + 10;
-    // if (mounted) setState(() => _cutoutTop = computed.clamp(100, 400));
+    // if (mounted) setState(() => _cutoutTop = (pos.dy - stackPos.dy - 35 + 10).clamp(100, 400));
   }
 
   Future<void> _loadProfile() async {
@@ -356,23 +355,6 @@ class _SuccessScreenState extends State<SuccessScreen> {
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
             color: Colors.black, fontFamily: 'Calibri')),
       ],
-    );
-  }
-}
-
-// ── Cutout circle widget ─────────────────────────────────────────
-class _CutoutCircle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Ambil warna background dari tema — fallback ke dark red OCTO
-    // Idealnya ini di-pass dari parent, tapi karena bg adalah SVG,
-    // kita hardcode warna yang match bg-screen.svg
-    return Container(
-      width: 20, height: 20,
-      decoration: const BoxDecoration(
-        color: Color(0xFF8C0E1A),
-        shape: BoxShape.circle,
-      ),
     );
   }
 }

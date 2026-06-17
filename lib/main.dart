@@ -5,6 +5,9 @@ import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/tagihan_screen.dart';
 import 'screens/qris_screen.dart';
+import 'screens/my_account_screen.dart';
+import 'screens/investasi_screen.dart';
+import 'screens/poin_xtra_screen.dart';
 
 void main() {
   runApp(const OctoApp());
@@ -39,13 +42,14 @@ class OctoApp extends StatelessWidget {
         '/kartu':        (context) => const Placeholder(),
         '/verify':       (context) => const Placeholder(),
         '/jadwal':       (context) => const Placeholder(),
-        '/investasi':    (context) => const Placeholder(),
+        '/investasi':    (context) => const InvestasiScreen(),
         '/promo':        (context) => const Placeholder(),
         '/tabungan':     (context) => const Placeholder(),
         '/qris':         (context) => const QrisScreen(),
-        '/account':      (context) => const Placeholder(),
-        '/wealth':       (context) => const Placeholder(),
+        '/account':      (context) => const MyAccountScreen(),
+        '/wealth':       (context) => const InvestasiScreen(),
         '/settings':     (context) => const Placeholder(),
+        '/poin-xtra':    (context) => const PoinXtraScreen(),
 
         // ── Route khusus: setelah login berhasil ──
         '/home-loggedin': (context) => const OctoHomeScreenLoggedIn(),

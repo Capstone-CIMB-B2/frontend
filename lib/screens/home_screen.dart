@@ -8,6 +8,8 @@ import 'personalisasi_screen.dart';
 import '../services/api_service.dart';
 import '../models/transaction_response.dart';
 import 'riwayat_transaksi_screen.dart';
+import 'my_account_screen.dart';
+import 'investasi_screen.dart';
 
 String formatCurrency(double amount) {
   return 'IDR ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
@@ -114,12 +116,18 @@ class _OctoHomeScreenLoggedInState extends State<OctoHomeScreenLoggedIn> {
 
   void changeTab(int index) => setState(() => _bottomNav = index);
 
-  final List<Widget> _pages = const [
-    _HomeContentLoggedIn(),
-    Center(child: Text('Halaman My Account')),
-    Center(child: Text('Halaman Wealth')),
-    SettingsScreen(isLoggedIn: true),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const _HomeContentLoggedIn(),
+      const MyAccountScreen(),
+      InvestasiScreen(onBack: () => changeTab(0)),
+      const SettingsScreen(isLoggedIn: true),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +283,10 @@ class _HomeContentLoggedInState extends State<_HomeContentLoggedIn> {
                 const SizedBox(height: 24),
                 GestureDetector(
                   onTap: () async {
-                    await ApiService.updateConsent(true);
+                    final success = await ApiService.updateConsent(true);
+                    if (success) {
+                      isPersonalizationEnabledNotifier.value = true;
+                    }
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: Container(
@@ -1295,6 +1306,20 @@ class _MenuGrid extends StatelessWidget {
                                 interactionType: 'feature_click',
                               );
                               Navigator.pushNamed(context, '/tagihan');
+                            } else if (item['label'] == 'Poin Xtra') {
+                              ApiService.trackInteraction(
+                                featureAccessed: 'Poin Xtra',
+                                action: 'click',
+                                interactionType: 'feature_click',
+                              );
+                              Navigator.pushNamed(context, '/poin-xtra');
+                            } else if (item['label'] == 'Investasi') {
+                              ApiService.trackInteraction(
+                                featureAccessed: 'Investasi',
+                                action: 'click',
+                                interactionType: 'feature_click',
+                                );
+                              Navigator.pushNamed(context, '/investasi');
                             }
                           },
                         ),

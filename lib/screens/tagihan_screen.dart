@@ -91,7 +91,7 @@ class _TagihanScreenState extends State<TagihanScreen> {
     const _ServiceItem(
       label: 'Streaming & Hiburan',
       category: 'tagihan',
-      iconPath: 'assets/icons/tagihan/Hiburan.svg',
+      iconPath: 'assets/icons/tagihan/Streaming.svg',
       keywords: ['netflix', 'spotify', 'youtube', 'streaming', 'hiburan'],
     ),
     const _ServiceItem(
@@ -1348,7 +1348,6 @@ class _TagihanScreenState extends State<TagihanScreen> {
 
   // ── Kartu favorit / terakhir ───────────────────────────────────────────
   Widget _buildFavoritCard(Map<String, String> item) {
-    final isRecent = _selectedFavTab == 1;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(

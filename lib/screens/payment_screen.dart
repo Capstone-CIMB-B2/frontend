@@ -48,7 +48,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   bool get _isPulsa => widget.transactionMethod == 'Pembelian Pulsa';
   bool get _isTopUp => widget.transactionMethod == 'Top Up';
-  bool get _isTagihan => !_isPulsa && !_isTopUp;
 
   @override
   void initState() {

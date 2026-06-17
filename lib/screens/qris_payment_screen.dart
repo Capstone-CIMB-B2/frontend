@@ -70,16 +70,6 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
     return str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
   }
 
-  String _getInitials(String name) {
-    final clean = name.trim();
-    if (clean.isEmpty) return '??';
-    final parts = clean.split(RegExp(r'\s+'));
-    if (parts.length > 1) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
-  }
-
   @override
   void dispose() {
     _amountController.dispose();

@@ -101,7 +101,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  @override
   Future<List<Map<String, String>>> _getAddressSuggestions(String query) async {
     if (query.length < 3) return [];
     try {
